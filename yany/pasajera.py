@@ -24,4 +24,13 @@ class Pasajera(Persona):
             raise ValueError("El contacto de emergencia no puede estar vacío.")
         self.__contacto_emergencia = contacto_emergencia
 
-    
+    #MÉTODOS 
+    #MÉTODO CALCULAR DESCUENTO
+    def calcular_descuento(self, valor_viaje: float):
+        # Pasajera estándar tiene un 2% de descuento (0.02)
+        return valor_viaje * 0.02
+  
+      # MÉTODO MOSTRAR INFORMACIÓN 
+    def mostrar_info(self):
+        info_persona = super().mostrar_info()
+        return f"{info_persona}, y el contacto de emergencia es: {self.__contacto_emergencia}"  
