@@ -31,6 +31,3 @@ class Persona:
     #MÉTODO MOSTRAR INOFORMACIÓN
     def mostrar_info(self):
         return f"El id es: {self.__id}, el nombre es: {self.__nombre},  y el telefono es: {self.__telefono}"
-
-p = Persona(1011, "jime", "3148445554")
-print(p.mostrar_info())
