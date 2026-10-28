@@ -18,8 +18,12 @@ class PasajeraPremium(Pasajera):
             raise ValueError("El porcentaje de descuento debe estar entre 0 y 1.")
         self.__porcentaje_descuento = porcentaje_descuento 
 
-
+    #MÉTODOS 
     #MÉTODO CALCULAR DESCUENTO
     def calcular_descuento(self, valor_viaje: float):
         #LA PASAJERA PREMIUM TIENE UN DESCUENTO DEL 5% (0.05)
         return valor_viaje * self.__porcentaje_descuento
+
+    #MÉTODO MOSTRAR_INFO
+    def mostrar_info(self):
+        return super().mostrar_info() + f", y el descuento es: {self.porcentaje_descuento}"

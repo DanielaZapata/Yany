@@ -12,7 +12,7 @@ def test_mostrar_info_contiene_contacto():
 
 def test_calcular_descuento_pasajera():
     p = Pasajera(1011, "jime", "3148445544", "3000000000")
-    # Para un viaje de $20.000 COP, el 2% de descuento son $400 COP
+    #PARA UN VIAJE DE $20.000 COP, EL 2% DE DESCUENTO SON $400 COP
     assert p.calcular_descuento(20000.0) == 400.0
 
 def test_contacto_emergencia_vacio():
