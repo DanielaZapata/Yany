@@ -70,13 +70,8 @@
             <mxPoint x="157.17" y="291.83" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="QktjimgDwxQbX6oFHRRo-1" parent="1" style="verticalAlign=top;align=left;overflow=fill;html=1;whiteSpace=wrap;fontColor=light-dark(#FFFFFF,#000000);fillColor=light-dark(#FFFFFF,#DCC8F5);strokeColor=light-dark(#000000,#B266FF);" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PasajeraPremium&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot; style=&quot;border-style:solid;&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;- porcentaje_descuento: float&lt;/p&gt;&lt;hr size=&quot;1&quot; style=&quot;border-style:solid;&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ calcular_descuento(): float&lt;/p&gt;" vertex="1">
-          <mxGeometry height="80" width="168" x="76" y="355" as="geometry" />
-        </mxCell>
-        <mxCell id="QktjimgDwxQbX6oFHRRo-4" edge="1" parent="1" source="QktjimgDwxQbX6oFHRRo-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="408" y="370" as="targetPoint" />
-          </mxGeometry>
+        <mxCell id="QktjimgDwxQbX6oFHRRo-1" parent="1" style="verticalAlign=top;align=left;overflow=fill;html=1;whiteSpace=wrap;fontColor=light-dark(#FFFFFF,#000000);fillColor=light-dark(#FFFFFF,#DCC8F5);strokeColor=light-dark(#000000,#B266FF);" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PasajeraPremium&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot; style=&quot;border-style:solid;&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;- porcentaje_descuento: float&lt;/p&gt;&lt;hr size=&quot;1&quot; style=&quot;border-style:solid;&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ calcular_descuento(): float&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ mostrar_info()&amp;nbsp;&lt;/p&gt;" vertex="1">
+          <mxGeometry height="90" width="168" x="76" y="355" as="geometry" />
         </mxCell>
         <mxCell id="QktjimgDwxQbX6oFHRRo-3" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(0, 0, 0));&quot;&gt;Conduce&lt;/span&gt;" vertex="1">
           <mxGeometry height="30" width="60" x="342" y="333" as="geometry" />
