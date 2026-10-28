@@ -20,8 +20,8 @@ class Pasajera(Persona):
 
     #MÉTODOS 
     #MÉTODO CALCULAR DESCUENTO
-    def calcular_descuento(self, valor_viaje: float):
-        # Pasajera estándar tiene un 2% de descuento (0.02)
+    def calcular_descuento(self, valor_viaje= float):
+        #LA PASAJERA ESTÁNDAR TIENE UN DESCUENTO DEL 2% (0.02)
         return valor_viaje * 0.02
   
       # MÉTODO MOSTRAR INFORMACIÓN 
