@@ -26,4 +26,4 @@ class PasajeraPremium(Pasajera):
 
     #MÉTODO MOSTRAR_INFO
     def mostrar_info(self):
-        return super().mostrar_info() + f", y el descuento es: {self.porcentaje_descuento}"
+        return super().mostrar_info() + f", y el descuento es: {self.porcentaje_descuento}."

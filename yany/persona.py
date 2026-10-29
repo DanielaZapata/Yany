@@ -30,4 +30,4 @@ class Persona:
 
     #MÉTODO MOSTRAR INOFORMACIÓN
     def mostrar_info(self):
-        return f"El id es: {self.__id}, el nombre es: {self.__nombre},  y el telefono es: {self.__telefono}"
+        return f"El id es: {self.__id}, el nombre es: {self.__nombre},  y el telefono es: {self.__telefono}."

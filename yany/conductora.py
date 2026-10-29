@@ -40,3 +40,21 @@ class Conductora(Persona):
     @resenas.setter
     def resenas(self, resenas):
         self.__resenas = resenas
+
+    #MÉTODOS 
+    #MÉTODO CALIFICACION PROMEDIO 
+    def calificacion_promedio(self):
+        if not self.__resenas:
+            return 0.0
+        #SUMAMOS TODAS LAS CALIFICACIONES DE LAS RESEÑAS Y LAS DIVIDIMOS ENTRE EL TOTAL
+        suma = sum(resena.calificacion for resena in self.__resenas)
+        return suma / len(self.__resenas)
+    
+    #MÉTODO AGREGAR RESEÑA 
+    def agregar_resena(self, resena):
+        self.__resenas.append(resena)
+        
+    #MÉTODO MOSTRAR INFO 
+    def mostrar_info(self):
+        info_conductora = super().mostrar_info()
+        return f"{info_conductora}, su estado de certificación es: {self.__certificada}, está disponible: {self.__disponible}, el vehiculo es: {self.__vehiculo}, y las reseñas son: {len(self.__resenas)}."
