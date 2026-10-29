@@ -2,7 +2,7 @@ from yany.persona import Persona
 
 class Pasajera(Persona):
     def __init__(self, id=int, nombre=str, telefono=str, contacto_emergencia=str):
-        # Hereda los atributos de la clase padre (Persona)
+        #HEREDA LOS ATRIBUTOS DE LA CLASE PADRE (PERSONA) 
         super().__init__(id, nombre, telefono)
         self.contacto_emergencia = contacto_emergencia
 

@@ -2,7 +2,7 @@ from yany.pasajera import Pasajera
 
 class PasajeraPremium(Pasajera):
     def __init__(self, id: int, nombre: str, telefono: str, contacto_emergencia: str, porcentaje_descuento: float = 0.05):
-        #Hereda de Pasajera
+        #HEREDA DE PASAJERA 
         super().__init__(id, nombre, telefono, contacto_emergencia)
         self.porcentaje_descuento = porcentaje_descuento
 
