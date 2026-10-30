@@ -21,8 +21,9 @@ class Resena:
         self.__id = id 
     @calificacion.setter
     def calificacion(self, calificacion: int):
-        if not isinstance(calificacion, int) or not 1 <= calificacion <= 5: #SI LA CALIFICACIÓN NO ES UN NÚMERO ENTERO, O NO ESTÁ ENTRE 1 Y 5 ENTONCES ES UN ERROR. 
-         self.__calificacion = calificacion
+        if not isinstance(calificacion, int) or not 1 <= calificacion <= 5: #SI LA CALIFICACIÓN NO ES UN NÚMERO ENTERO, O NO ESTÁ ENTRE 1 Y 5 ENTONCES ES UN ERROR.
+            raise ValueError("La calificación debe ser un entero entre 1 y 5")
+        self.__calificacion = calificacion
     @comentario.setter
     def comentario(self, comentario: str):
         self.__comentario = comentario
