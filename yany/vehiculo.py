@@ -1,9 +1,9 @@
 class Vehiculo: 
-    def __init__(self, placa: str, color: str, anio: int, mantenimientos: list):
+    def __init__(self, placa: str, color: str, anio: int, mantenimientos: list = None):
         self.placa = placa 
         self.color = color 
         self.anio = anio 
-        self.mantenimientos = mantenimientos 
+        self.mantenimientos = mantenimientos if mantenimientos is not None else []
 
     #GETTERS 
     @property
@@ -32,4 +32,8 @@ class Vehiculo:
     @mantenimientos.setter
     def mantenimientos(self, mantenimientos):
         self.__mantenimientos = mantenimientos 
+
+    #MÉTODO REGISTRAR_MANTENIMIENTO
+    def registrar_mantenimiento(self, mantenimiento):
+        self.__mantenimientos.append(mantenimiento)
 
