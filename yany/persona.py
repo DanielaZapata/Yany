@@ -1,6 +1,6 @@
 class Persona: 
-    def __init__(self, id= int, nombre= str, telefono= str): 
-        self.id = id 
+    def __init__(self, id: int, nombre: str, telefono: str): 
+        self.__id = id 
         self.nombre = nombre 
         self.telefono = telefono 
 
@@ -16,9 +16,6 @@ class Persona:
         return self.__telefono
 
     #SETTERS 
-    @id.setter
-    def id(self, id):
-        self.__id = id 
     @nombre.setter
     def nombre(self, nombre):
         if not nombre.strip(): 
@@ -28,6 +25,6 @@ class Persona:
     def telefono(self, telefono):
         self.__telefono = telefono
 
-    #MÉTODO MOSTRAR INOFORMACIÓN
+    #MÉTODO MOSTRAR INFORMACIÓN
     def mostrar_info(self):
-        return f"El id es: {self.__id}, el nombre es: {self.__nombre},  y el telefono es: {self.__telefono}."
+        return f"El id es: {self.__id}, el nombre es: {self.__nombre}, y el telefono es: {self.__telefono}."
