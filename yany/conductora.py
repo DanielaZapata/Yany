@@ -1,7 +1,8 @@
 from yany.persona import Persona
+from yany.vehiculo import Vehiculo
 
 class Conductora(Persona):
-    def __init__(self, id: int, nombre: str, telefono: str, certificada: bool, disponible: bool, vehiculo = None, resenas = None):
+    def __init__(self, id: int, nombre: str, telefono: str, certificada: bool, disponible: bool, vehiculo: Vehiculo = None, resenas = None):
         #HEREDA LOS ATRIBUTOS DE LA CLASE PADRE(Persona)
         super().__init__(id, nombre, telefono)
         self.certificada = certificada 
