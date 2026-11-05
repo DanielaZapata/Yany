@@ -1,8 +1,10 @@
+from yany.pasajera import Pasajera
+from yany.conductora import Conductora
 class Viaje:
     ESTADOS_VALIDOS = ["Solicitado", "En_curso", "Finalizado", "Cancelado"]
     TARIFA_BASE = 8000
 
-    def _init_(self, id: int, pasajera: Pasajera, conductora: Conductora, origen: str, destino: str, estado: str = "Solicitado"):
+    def __init__(self, id: int, pasajera: Pasajera, conductora: Conductora, origen: str, destino: str, estado: str = "Solicitado"):
         self.__id = id
         self.pasajera = pasajera
         self.conductora = conductora
@@ -63,3 +65,21 @@ class Viaje:
         if estado not in Viaje.ESTADOS_VALIDOS:
             raise ValueError("El estado debe ser uno de: " + ", ".join(Viaje.ESTADOS_VALIDOS))
         self.__estado = estado
+    # metodos 
+    # Metodo calcular tarifa
+
+    def calcular_tarifa(self):
+        descuento = self.pasajera.calcular_descuento(Viaje.TARIFA_BASE)
+
+        return Viaje.TARIFA_BASE - descuento
+
+    # cambiar estado
+    def cambiar_estado(self, estado: str):
+        if self.estado in ("Finalizado", "Cancelado"):
+            raise ValueError("No se puede cambiar el estado de un viaje " + self.estado + ".")
+
+        self.estado = estado 
+
+    # Metodo mostrar la información
+    def mostrar_info(self):
+        return f"Viaje {self.id}: de {self.origen} a {self.destino}, estado: {self.estado}, tarifa: {self.calcular_tarifa()}."
