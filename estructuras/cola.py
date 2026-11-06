@@ -1,4 +1,4 @@
-from yany.estructuras.nodo import Nodo
+from estructuras.nodo import Nodo
 class Cola:
     def __init__(self):
         self.__frente = None
