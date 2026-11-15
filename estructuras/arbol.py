@@ -1,5 +1,5 @@
 class NodoArbol:
-    def _init_(self, dato):
+    def __init__(self, dato):
         self.__dato = dato
         self.__izquierdo = None
         self.__derecho = None
@@ -24,7 +24,7 @@ class NodoArbol:
 
 
 class Arbol:
-    def _init_(self):
+    def __init__(self):
         self.__raiz = None
 
     @property
@@ -36,7 +36,7 @@ class Arbol:
         if self.__raiz is None:
             self.__raiz = NodoArbol(zona)
         else:
-            self.insertar_en(self._raiz, zona)
+            self._insertar_en(self.__raiz, zona)
 
     def _insertar_en(self, nodo, zona):
         if zona.id == nodo.dato.id:
@@ -67,7 +67,7 @@ class Arbol:
     # devuelve las zonas ordenadas por id (izquerda, raiz, derecha)
     def inorden(self):
         zonas = []
-        self.inorden_en(self._raiz, zonas)
+        self._inorden_en(self.__raiz, zonas)
         return zonas
 
     def _inorden_en(self, nodo, zonas):
