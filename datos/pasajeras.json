@@ -1,0 +1,14 @@
+[
+    {
+        "id": 1,
+        "nombre": "Ana",
+        "telefono": "3001112233",
+        "contacto_emergencia": "Maria 3004445566"
+    },
+    {
+        "id": 2,
+        "nombre": "Sofia",
+        "telefono": "3007778899",
+        "contacto_emergencia": "Laura 3001230000"
+    }
+]

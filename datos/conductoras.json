@@ -1,0 +1,30 @@
+[
+    {
+        "id": 10,
+        "nombre": "Laura",
+        "telefono": "3002223344",
+        "certificada": true,
+        "disponible": false,
+        "vehiculo": {
+            "placa": "ABC123",
+            "color": "rojo",
+            "anio": 2020
+        },
+        "resenas": [
+            {
+                "id": 1,
+                "calificacion": 5,
+                "comentario": "muy buen servicio"
+            }
+        ]
+    },
+    {
+        "id": 11,
+        "nombre": "Sara",
+        "telefono": "3005556677",
+        "certificada": true,
+        "disponible": false,
+        "vehiculo": null,
+        "resenas": []
+    }
+]

@@ -82,3 +82,15 @@ class Arbol:
             self._inorden_en(nodo.izquierdo, zonas)
             zonas.append(nodo.dato)
             self._inorden_en(nodo.derecho, zonas)
+
+     # devuelve las zonas en orden (raiz, izquierda, derecha)
+    def preorden(self):
+        zonas = []
+        self._preorden_en(self.__raiz, zonas)
+        return zonas
+
+    def _preorden_en(self, nodo, zonas):
+        if nodo is not None:
+            zonas.append(nodo.dato)
+            self._preorden_en(nodo.izquierdo, zonas)
+            self._preorden_en(nodo.derecho, zonas)
