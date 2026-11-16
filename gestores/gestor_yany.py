@@ -9,22 +9,25 @@ from yany.alerta import Alerta
 class GestorYANY:
     def __init__(self):
         # listas
-        self.lista_pasajeras = Lista()
-        self.lista_conductoras = Lista()
-        self.lista_viajes = Lista()
+        self.__lista_pasajeras = Lista()
+        self.__lista_conductoras = Lista()
+        self.__lista_viajes = Lista()
 
         # colas
-        self.cola_solicitudes = Cola()
-        self.cola_alertas = Cola()
+        self.__cola_solicitudes = Cola()
+        self.__cola_alertas = Cola()
  
         # pila del historial (el ultimo viaje queda arriba)
-        self.pila_historial = Pila()
+        self.__pila_historial = Pila()
  
         # arbol de zonas
-        self.arbol_zonas = Arbol()
+        self.__arbol_zonas = Arbol()
  
         # para guardar y cargar los datos en archivos
-        self.archivos = GestorArchivos()
+        self.__archivos = GestorArchivos()
+
+        # para darle un id distinto a cada alerta
+        self.__contador_alertas = 1
 
 
     def registrar_pasajera(self, pasajera):
@@ -77,7 +80,12 @@ class GestorYANY:
             self.__lista_viajes.agregar(viaje)
             asignados += 1
         return asignados
- 
+
+    def __buscar_viaje(self, id_viaje):
+        for v in self.__lista_viajes.mostrar():
+            if v.id == id_viaje:
+                return v
+        return None    
  
     def activar_alerta(self, id_viaje, tipo):
         # buscar el viaje, si no existe no se crea la alerta
@@ -101,7 +109,7 @@ class GestorYANY:
             return None
         alerta.atender()
         return alerta
- 
+
  
     def finalizar_viaje(self, id_viaje):
         # 1. buscar el viaje en lista_viajes

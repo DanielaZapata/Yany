@@ -1,0 +1,26 @@
+[
+    {
+        "id": 100,
+        "pasajera_id": 1,
+        "conductora_id": 10,
+        "origen": "Centro",
+        "destino": "Poblado",
+        "estado": "Finalizado"
+    },
+    {
+        "id": 101,
+        "pasajera_id": 2,
+        "conductora_id": 11,
+        "origen": "Laureles",
+        "destino": "Envigado",
+        "estado": "En_curso"
+    },
+    {
+        "id": 102,
+        "pasajera_id": 1,
+        "conductora_id": 10,
+        "origen": "Belen",
+        "destino": "Centro",
+        "estado": "En_curso"
+    }
+]

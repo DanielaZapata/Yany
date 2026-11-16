@@ -130,4 +130,11 @@ class GestorArchivos:
                           d["origen"], d["destino"], d["estado"])
             lista.agregar(viaje)
         return lista
- 
+
+
+    # BUSCAR en una lista el objeto que tenga ese id
+    def __buscar_por_id(self, lista, id):
+        for x in lista.mostrar():
+            if x.id == id:
+                return x
+        return None
