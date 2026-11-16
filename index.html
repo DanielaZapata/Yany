@@ -629,3 +629,273 @@ button:disabled {
       'ok'
     );
   });
+
+// Permite usar la ubicación actual como punto de partida.
+  $('useLocation').addEventListener('click', () => {
+    if (!navigator.geolocation) {
+      message('Este navegador no permite obtener la ubicación.', 'error');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const coordenadas =
+          position.coords.latitude.toFixed(6) +
+          ', ' +
+          position.coords.longitude.toFixed(6);
+
+        $('origin').value = coordenadas;
+        $('googleMap').src =
+          'https://maps.google.com/maps?q=' +
+          encodeURIComponent(coordenadas) +
+          '&z=16&output=embed';
+        $('routeStatus').textContent = 'Ubicación actual';
+        message('Tu ubicación se agregó como punto de partida.', 'ok');
+      },
+      () => {
+        message(
+          'No se pudo acceder a tu ubicación. Activa el permiso en el navegador.',
+          'error'
+        );
+      }
+    );
+  });
+
+  // Envía la solicitud del viaje al backend de Flask.
+  $('requestService').addEventListener('click', async () => {
+    if (!rutaLista) return;
+
+    const distancia = Number($('distanceKm').value);
+    if (!Number.isFinite(distancia) || distancia <= 0) {
+      message('Indica la distancia estimada en kilómetros para calcular el precio.', 'error');
+      return;
+    }
+    const acompana = $('hasCompanion').value === 'si';
+    const datosViaje = {
+      origen: $('origin').value.trim(),
+      destino: $('destination').value.trim(),
+      tipo_servicio: $('serviceType').value,
+      pasajeras: Number($('passengers').value),
+      distancia_km: distancia,
+      acompanante: acompana ? {
+        viaja_acompanada: true,
+        relacion: $('companionRelation').value,
+        cantidad: Number($('companionCount').value),
+        notas: $('companionNotes').value.trim()
+      } : {viaja_acompanada: false, relacion: null, cantidad: 0, notas: ''}
+    };
+
+    $('requestService').disabled = true;
+
+    try {
+      const respuesta = await fetch('/api/viajes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(datosViaje)
+      });
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        throw new Error(datos.error || 'No se pudo registrar el viaje.');
+      }
+
+      message(
+        '¡Solicitud registrada! Viaje #' + datos.viaje.id + '. Estado: Pendiente de aceptación por una conductora. Total estimado: ' + moneda(datos.viaje.tarifa.total_estimado) + '.',
+        'ok'
+      );
+      $('routeStatus').textContent = 'Solicitud registrada';
+      await actualizarResumen();
+      await actualizarMiEspacio();
+    } catch (error) {
+      message(
+        error.message + ' Verifica que app.py esté ejecutándose.',
+        'error'
+      );
+    } finally {
+      $('requestService').disabled = false;
+    }
+  });
+
+  // Consulta resumen, viajes y conductoras para mostrar las asignaciones.
+  async function actualizarResumen() {
+    try {
+      const [respuestaResumen, respuestaViajes, respuestaConductoras] =
+        await Promise.all([
+          fetch('/api/resumen'),
+          fetch('/api/viajes'),
+          fetch('/api/conductoras')
+        ]);
+
+      if (!respuestaResumen.ok || !respuestaViajes.ok || !respuestaConductoras.ok) {
+        throw new Error('No se pudo consultar la información.');
+      }
+
+      const resumen = await respuestaResumen.json();
+      const viajes = await respuestaViajes.json();
+      const conductoras = await respuestaConductoras.json();
+
+      $('tripTotal').textContent = resumen.total_viajes;
+      $('pendingTotal').textContent = resumen.total_pendientes;
+      $('alertTotal').textContent = resumen.total_alertas;
+
+      mostrarAsignaciones(viajes, conductoras);
+    } catch (error) {
+      $('tripTotal').textContent = '—';
+      $('pendingTotal').textContent = '—';
+      $('alertTotal').textContent = '—';
+      $('assignedTrips').textContent =
+        'No se pudieron cargar las asignaciones. Comprueba que el servidor esté activo.';
+    }
+  }
+
+  // Presenta el nombre y el vehículo de la conductora asignada a cada viaje.
+  function mostrarAsignaciones(viajes, conductoras) {
+    const contenedor = $('assignedTrips');
+    const conductorasPorId = new Map(
+      conductoras.map((conductora) => [String(conductora.id), conductora])
+    );
+    const viajesAsignados = viajes.filter((viaje) => viaje.conductora_id);
+
+    contenedor.replaceChildren();
+
+    if (viajesAsignados.length === 0) {
+      contenedor.textContent =
+        'Todavía no hay viajes con conductora asignada.';
+      return;
+    }
+
+    viajesAsignados.forEach((viaje) => {
+      const conductora = conductorasPorId.get(String(viaje.conductora_id));
+      const vehiculo = conductora ? conductora.vehiculo || {} : {};
+      const linea = document.createElement('p');
+
+      if (conductora) {
+        linea.textContent =
+          'Viaje #' + viaje.id + ': ' + conductora.nombre +
+          ' · Placa: ' + (vehiculo.placa || 'No registrada') +
+          ' · Estado: ' + viaje.estado;
+      } else {
+        linea.textContent =
+          'Viaje #' + viaje.id + ': conductora #' + viaje.conductora_id +
+          ' · Estado: ' + viaje.estado;
+      }
+
+      contenedor.appendChild(linea);
+    });
+  }
+
+  // Convierte los campos de un formulario en un objeto JavaScript.
+  function formData(formulario) {
+    return Object.fromEntries(new FormData(formulario).entries());
+  }
+
+  // Convierte los campos de los formularios de acceso en un objeto.
+  function formData(formulario) {
+    return Object.fromEntries(new FormData(formulario).entries());
+  }
+
+  // Acceso de pasajeras: el servidor mantiene la sesión y protege la contraseña.
+  function mostrarMensajeAuth(id, texto, tipo) {
+    $(id).textContent = texto;
+    $(id).className = 'mensaje ' + tipo;
+  }
+
+  function mostrarPerfil(usuario) {
+    $('profileName').textContent = usuario.nombre || 'No registrado';
+    $('profileEmail').textContent = usuario.correo || 'No registrado';
+    $('profilePhone').textContent = usuario.telefono || 'No registrado';
+    $('profileEmergency').textContent = usuario.contacto_emergencia || 'No registrado';
+    const tipo = usuario.tipo_cuenta || (usuario.rol === 'conductora' ? 'Conductora' : 'Pasajera');
+    const tipoEl = $('profileType'); if (tipoEl) tipoEl.textContent = tipo;
+  }
+
+  let usuarioEnSesion = null;
+  function mostrarAplicacion(usuario) {
+    usuarioEnSesion = usuario;
+    $('authPanel').hidden = true;
+    $('appContent').hidden = false;
+    const esConductora = usuario.rol === 'conductora';
+    $('driverSpace').hidden = !esConductora;
+    $('mi-espacio').hidden = esConductora;
+    $('solicitar').hidden = esConductora;
+    $('actividad').hidden = esConductora;
+    $('welcomeName').textContent = usuario.nombre;
+    mostrarPerfil(usuario);
+    if (esConductora) {
+      $('driverWelcome').textContent = usuario.nombre;
+      const v=usuario.vehiculo || {};
+      $('driverVehicle').textContent=[v.marca,v.modelo].filter(Boolean).join(' ') || 'No registrado';
+      $('driverPlate').textContent=v.placa || '—';
+      $('driverCapacity').textContent=(v.capacidad || '—') + ' personas';
+      cargarSolicitudesConductora();
+      actualizarMiEspacio();
+    } else {
+      actualizarResumen();
+      actualizarMiEspacio();
+      cotizarViaje();
+    }
+  }
+
+  async function cargarSolicitudesConductora() {
+    try {
+      const [rSolicitudes, rViajes] = await Promise.all([
+        fetch('/api/conductora/solicitudes'),
+        fetch('/api/mis-viajes')
+      ]);
+
+      const solicitudes = await rSolicitudes.json();
+      const viajes = await rViajes.json();
+
+      if (!rSolicitudes.ok) {
+        throw new Error(solicitudes.error || 'No se pudieron cargar las solicitudes.');
+      }
+      if (!rViajes.ok) {
+        throw new Error(viajes.error || 'No se pudieron cargar tus servicios.');
+      }
+
+      const contenedor = $('driverRequests');
+      contenedor.replaceChildren();
+
+      if (!solicitudes.solicitudes || solicitudes.solicitudes.length === 0) {
+        const vacio = document.createElement('p');
+        vacio.textContent = 'No hay solicitudes pendientes compatibles con tu vehículo.';
+        contenedor.appendChild(vacio);
+      } else {
+        solicitudes.solicitudes.forEach((viaje) => {
+          const tarjeta = document.createElement('article');
+          tarjeta.className = 'viaje-card';
+
+          const titulo = document.createElement('strong');
+          titulo.textContent = 'Nueva solicitud de viaje';
+          tarjeta.appendChild(titulo);
+
+          const detalles = [
+            ['Origen', viaje.origen],
+            ['Destino', viaje.destino],
+            ['Personas', viaje.pasajeras],
+            ['Distancia', viaje.distancia_km + ' km'],
+            ['Precio estimado', viaje.tarifa ? moneda(viaje.tarifa.total_estimado) : 'No disponible'],
+            ['Acompañante', viaje.acompanante && viaje.acompanante.viaja_acompanada
+              ? (viaje.acompanante.relacion + ' · ' + viaje.acompanante.cantidad + ' persona(s) ' + (viaje.acompanante.notas || ''))
+              : 'Viaja sola']
+          ];
+
+          detalles.forEach(([etiqueta, valor]) => {
+            const parrafo = document.createElement('p');
+            parrafo.textContent = etiqueta + ': ' + (valor ?? '—');
+            tarjeta.appendChild(parrafo);
+          });
+
+          const botonAceptar = document.createElement('button');
+          botonAceptar.type = 'button';
+          botonAceptar.textContent = 'Aceptar este viaje';
+          botonAceptar.addEventListener('click', async () => {
+            botonAceptar.disabled = true;
+            try {
+              const respuesta = await fetch('/api/viajes/' + viaje.id + '/aceptar', {
+                method: 'POST'
+              });
+              const resultado = await respuesta.json();
+              if (!respuesta.ok) {
+                throw new Error(resultado.error || 'No se pudo aceptar la solicitud.');
+              }
