@@ -1,9 +1,10 @@
+
 import pytest
 from estructuras.arbol import Arbol, NodoArbol
 
 # zona de prueba, solo necesita tener id
 class ZonaPrueba:
-    def _init_(self, id, nombre):
+    def __init__(self, id, nombre):
         self.id = id
         self.nombre = nombre
 
