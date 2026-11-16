@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="es">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width,initial-scale=1" name="viewport"/>
+  <title>
+   YANY | Una App de mujeres y para mujeres.
+  </title>
+  <style>
+   :root {
+  --fondo:#1a0f26;
+  --tarjeta:#2a1740;
+  --texto:#f5ecff;
+  --morado:#d080ff;
+  --morado-fuerte:#9b4de0;
+  --alerta:#ff5c7a;
+  --borde:#60368a}
+
+* {
+  box-sizing:border-box}
+body {
+  margin:0;
+  font-family:"Segoe UI",Arial,sans-serif;
+  background:var(--fondo);
+  color:var(--texto);
+  min-height:100vh;
+  display:flex;
+  flex-direction:column}
+
+.menu {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 24px;
+  background:var(--tarjeta);
+  border-bottom:2px solid var(--morado-fuerte)}
+
+.marca {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  color:var(--morado);
+  font-weight:700;
+  font-size:1.3rem;
+  text-decoration:none}
+.marca img {
+  width:42px;
+  height:42px;
+  object-fit:contain;
+  border-radius:10px}
+.marca .fallback {
+  width:42px;
+  height:42px;
+  border-radius:10px;
+  background:var(--morado-fuerte);
+  display:grid;
+  place-items:center;
+  color:#fff;
+  font-size:24px}
+
+.menu nav {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px}
+.menu nav a {
+  color:var(--texto);
+  text-decoration:none;
+  padding:8px 14px;
+  border-radius:999px}
+.menu nav a:hover {
+  background:var(--morado-fuerte)}
+
+.contenido {
+  flex:1;
+  padding:32px 24px;
+  max-width:1250px;
+  width:100%;
+  margin:0 auto}
+.portada {
+  text-align:center;
+  padding:24px 0}
+.portada .lema {
+  font-size:1.05rem;
+  margin:16px 0 24px;
+  color:#d9c3ed}
+
+.tarjeta,form {
+  background:var(--tarjeta);
+  border:1px solid var(--morado-fuerte);
+  border-radius:16px;
+  padding:24px}
+.layout {
+  display:grid;
+  grid-template-columns:minmax(280px,360px) minmax(0,1fr);
+  gap:18px;
+  align-items:start}
+.tarjeta h2 {
+  margin:0 0 14px;
+  color:var(--morado)}
+
+label {
+  display:block;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.5px;
+  margin:15px 0 7px;
+  color:#e7d4f8}
+input,select {
+  width:100%;
+  padding:12px;
+  border-radius:10px;
+  border:1px solid var(--morado-fuerte);
+  background:var(--fondo);
+  color:var(--texto);
+  margin:6px 0 10px}
+
+button,.boton {
+  display:inline-block;
+  background:var(--morado);
+  color:#1a0f26;
+  border:0;
+  border-radius:999px;
+  padding:11px 22px;
+  font-weight:700;
+  text-decoration:none;
+  cursor:pointer}
+button:hover,.boton:hover {
+  background:var(--morado-fuerte);
+  color:white}
+button:disabled {
+  opacity:.55;
+  cursor:not-allowed}
+.boton.secundario {
+  background:transparent;
+  border:2px solid var(--morado);
+  color:var(--morado)}
+.boton.peligro {
+  background:var(--alerta);
+  color:#1a0f26}
+
+.acciones {
+  display:grid;
+  gap:10px;
+  margin-top:8px}
+.acciones button {
+  width:100%}
+.mensaje {
+  display:none;
+  padding:12px 16px;
+  border-radius:12px;
+  margin:12px 0;
+  font-size:13px}
+.mensaje.ok {
+  display:block;
+  background:#1f3d2b;
+  border:1px solid #4ade80}
+.mensaje.error {
+  display:block;
+  background:#4a1a26;
+  border:1px solid var(--alerta)}
+
+.cabecera-mapa {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px}
+.estado {
+  font-size:11px;
+  color:#d9b3f5;
+  background:#43245f;
+  border-radius:999px;
+  padding:8px 12px}
+#mapa {
+  height:520px;
+  width:100%;
+  border:1px solid var(--morado-fuerte);
+  border-radius:12px;
+  overflow:hidden;
+  background:#eee}
+#googleMap {
+  width:100%;
+  height:100%;
+  border:0;
+  display:block}
+.nota {
+  font-size:12px;
+  color:#cbb5df;
+  margin-top:10px}
+.cuadricula {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:16px;
+  margin-top:20px}
+.mini {
+  background:#211331;
+  border:1px solid #60368a;
+  border-radius:12px;
+  padding:14px;
+  color:#d9c3ed;
+  font-size:13px}
+.mini strong {
+  display:block;
+  color:var(--morado);
+  font-size:22px;
+  margin-top:6px}
+.pie {
+  text-align:center;
+  padding:16px;
+  color:var(--morado);
+  opacity:.8}
+.admin {
+  margin-top:20px}
+.admin summary {
+  cursor:pointer;
+  color:var(--morado);
+  font-weight:800;
+  font-size:18px}
+.admin-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:14px;
+  margin-top:18px}
+.admin form {
+  padding:16px;
+  background:#211331;
+  border-color:#60368a}
+.admin h3 {
+  margin:0 0 8px;
+  color:var(--morado);
+  font-size:16px}
+.admin button {
+  width:100%;
+  margin-top:8px}
+.admin .mensaje {
+  margin-top:8px}
+.asignaciones {
+  margin-top:22px;
+  padding-top:14px;
+  border-top:1px solid #60368a}
+.asignaciones h3 {
+  color:var(--morado);
+  margin:0 0 10px}
+.asignaciones p {
+  margin:8px 0;
+  padding:10px 12px;
+  background:#211331;
+  border-radius:9px;
+  font-size:13px}
+
+@media(max-width:850px) {
+  .layout {
+  grid-template-columns:1fr}
+#mapa {
+  height:430px}
+}
+@media(max-width:600px) {
+  .menu {
+  justify-content:center}
+.contenido {
+  padding:20px 14px}
+.tarjeta,form {
+  padding:18px}
+.cabecera-mapa {
+  align-items:flex-start;
+  flex-direction:column}
+}
+
+.auth-grid,.viajes-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.auth-card,.viaje-card{background:#211331;border:1px solid #60368a;border-radius:14px;padding:18px}
+.auth-card h2,.dashboard h2,.dashboard h3{color:var(--morado)}
+.auth-card button{width:100%;margin-top:8px}
+.auth-switch{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.auth-switch button{flex:1}
+.dashboard{margin:20px 0}
+.dashboard-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.dashboard-head p{color:#d9c3ed;margin:4px 0 14px}
+.viaje-card{margin:10px 0}
+.viaje-card strong{color:#f5ecff}
+.viaje-card p{margin:7px 0;color:#d9c3ed;font-size:13px}
+.estado-viaje{display:inline-block;padding:5px 10px;border-radius:999px;background:#43245f;color:#f5ecff;font-size:11px}
+.estado-viaje.activo{background:#1f3d2b;color:#a7f3c0}
+.seccion-viajes{margin-top:18px}
+[hidden]{display:none!important}
+@media(max-width:600px){.dashboard-head{align-items:flex-start;flex-direction:column}}
+
+  
+    .password-field{position:relative;width:100%;display:flex;align-items:center}
+    .password-field input{width:100%;padding-right:52px}
+    .password-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:auto!important;margin:0!important;padding:6px 8px!important;background:transparent!important;border:0!important;color:var(--morado)!important;cursor:pointer;font-size:18px;line-height:1}
+    .password-toggle:focus-visible{outline:2px solid var(--morado);border-radius:6px}
+
+
+.perfil-panel{margin-top:22px;padding:18px;background:#211331;border:1px solid #60368a;border-radius:14px}
+.perfil-panel h3{margin:0 0 14px;color:var(--morado)}
+.perfil-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.perfil-grid div{padding:12px;border-radius:10px;background:#2a1740}
+.perfil-grid span{display:block;color:#cbb5df;font-size:12px;margin-bottom:5px}
+.perfil-grid strong{overflow-wrap:anywhere}
+.lugares-grid{display:flex;flex-wrap:wrap;gap:10px}
+.lugares-grid button{margin:0}
+.ayuda-panel details{padding:13px 4px;border-top:1px solid #60368a}
+.ayuda-panel summary{cursor:pointer;color:var(--morado);font-weight:700}
+.ayuda-panel details p{color:#e3d4f0;margin:10px 0 0}
+#driverSpace{margin:20px 0}
+#farePanel{margin:16px 0}
+#fareTotal{color:#f0b8ff;font-size:22px}
+#companionFields{padding:14px;margin:12px 0;background:#2a1740;border-radius:12px}
+#registerRole{border-color:#a76ad1}
+.role-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:10px 0 18px}
+.role-choice{min-height:142px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:8px;text-align:left;padding:16px;border:1px solid #704397;background:#211331;color:var(--texto);border-radius:14px}
+.role-choice .role-icon{font-size:25px;color:var(--morado)}
+.role-choice strong{font-size:14px;line-height:1.35}
+.role-choice small{font-size:12px;line-height:1.4;color:#cbb5df;font-weight:400}
+.role-choice.selected{border:2px solid var(--morado);background:#3b2054;box-shadow:0 0 0 2px #d080ff22}
+@media(max-width:560px){.role-options{grid-template-columns:1fr}.role-choice{min-height:110px}}
+
+
+</style>
+ </head>
+ <body>
+  <header class="menu">
+   <a class="marca" href="/">
+    <img alt="Logo YANY" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'" src="/img/logo-yany.png"/>
+    <span>
+     YANY
+    </span>
+   </a>
+   <nav>
+    <a href="#solicitar">Solicitar viaje</a>
+    <a href="#mi-espacio">Mi espacio</a>
+    <a href="#ayuda">Ayuda</a>
+   </nav>
+  </header>
+  <main class="contenido">
+   <section class="portada">
+    <h1>
+     &iquest;A d&oacute;nde vamos hoy?
+    </h1>
+    <p class="lema">
+     Una App de mujeres y para mujeres.
+    </p>
+   </section>
+   <section class="tarjeta" id="authPanel" aria-label="Acceso a YANY">
+    <h2>Entra a tu espacio personal</h2>
+    <p class="nota">Crea tu cuenta o inicia sesión para solicitar viajes y consultar tus recorridos.</p>
+    <div class="auth-switch">
+     <button id="showLogin" type="button">Iniciar sesión</button>
+     <button class="boton secundario" id="showRegister" type="button">Crear cuenta</button>
+    </div>
+    <div class="auth-grid">
+     <form class="auth-card" id="loginForm">
+      <h3>Bienvenida de nuevo</h3>
+      <label for="loginEmail">Correo electrónico</label>
+      <input autocomplete="email" id="loginEmail" name="correo" required type="email" placeholder="tu@correo.com"/>
+      <label for="loginPassword">Contraseña</label>
+      <div class="password-field"><input autocomplete="current-password" id="loginPassword" name="contrasena" required type="password"/><button class="password-toggle" type="button" data-target="loginPassword" aria-label="Mostrar contraseña" aria-pressed="false" title="Mostrar contraseña">👁️</button></div>
+      <button type="submit">Entrar a mi cuenta</button>
+      <div class="mensaje" id="loginMsg"></div>
+     </form>
+     <form class="auth-card" id="registerForm" hidden>
+      <h3>Crear mi cuenta YANY</h3>
+      <label for="registerName">Nombre completo</label>
+      <input autocomplete="name" id="registerName" name="nombre" required/>
+      <label for="registerPhone">Teléfono</label>
+      <input autocomplete="tel" id="registerPhone" name="telefono" required/>
+      <label>ELIGE EL TIPO DE CUENTA QUE QUIERES CREAR</label>
+      <div class="role-options" role="group" aria-label="Tipo de cuenta">
+       <button class="role-choice selected" id="rolePassengerButton" type="button" aria-pressed="true">
+        <span class="role-icon">♀</span>
+        <strong>Registrarme como pasajera</strong>
+        <small>Solicita viajes y consulta tus recorridos</small>
+       </button>
+       <button class="role-choice" id="roleDriverButton" type="button" aria-pressed="false">
+        <span class="role-icon">🚘</span>
+        <strong>Registrarme como conductora</strong>
+        <small>Ofrece viajes y acepta solicitudes</small>
+       </button>
+      </div>
+      <select id="registerRole" name="rol" hidden>
+       <option value="pasajera">Soy pasajera</option>
+       <option value="conductora">Soy conductora</option>
+      </select>
+      <div id="passengerRegisterFields">
+       <label for="registerEmergency">Contacto de emergencia</label>
+       <input id="registerEmergency" name="contacto_emergencia" required/>
+       <label for="registerPremium">Tipo de pasajera</label>
+       <select id="registerPremium" name="premium">
+        <option value="false">Pasajera normal · 2% de descuento</option>
+        <option value="true">Pasajera premium · 5% de descuento</option>
+       </select>
+      </div>
+      <div id="driverRegisterFields" hidden>
+       <p class="nota">Registra los datos del vehículo con el que prestarás el servicio.</p>
+       <label for="registerPlate">Placa</label><input id="registerPlate" name="placa"/>
+       <label for="registerMake">Marca del vehículo</label><input id="registerMake" name="marca"/>
+       <label for="registerModel">Modelo</label><input id="registerModel" name="modelo"/>
+       <label for="registerCapacity">Capacidad total de personas</label>
+       <select id="registerCapacity" name="capacidad"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4" selected>4</option></select>
+      </div>
+      <label for="registerEmail">Correo electrónico</label>
+      <input autocomplete="email" id="registerEmail" name="correo" required type="email"/>
+      <label for="registerPassword">Contraseña (mínimo 8 caracteres)</label>
+      <div class="password-field"><input autocomplete="new-password" id="registerPassword" minlength="8" name="contrasena" required type="password"/><button class="password-toggle" type="button" data-target="registerPassword" aria-label="Mostrar contraseña" aria-pressed="false" title="Mostrar contraseña">👁️</button></div>
+      <button id="registerSubmitButton" type="submit">Crear cuenta de pasajera y entrar</button>
+      <div class="mensaje" id="registerMsg"></div>
+     </form>
+    </div>
+   </section>
+   <div id="appContent" hidden>
+    <section class="tarjeta dashboard" id="driverSpace" hidden>
+     <div class="dashboard-head"><div><h2>Espacio de conductora</h2><p>Bienvenida, <strong id="driverWelcome">conductora</strong>. Aquí puedes revisar y aceptar solicitudes.</p></div><button class="boton secundario" id="driverLogoutButton" type="button">Cerrar sesión</button></div>
+     <div class="perfil-panel"><h3>Mi vehículo</h3><div class="perfil-grid"><div><span>Vehículo</span><strong id="driverVehicle">—</strong></div><div><span>Placa</span><strong id="driverPlate">—</strong></div><div><span>Capacidad</span><strong id="driverCapacity">—</strong></div></div></div>
+     <div class="seccion-viajes"><h3>Solicitudes pendientes</h3><p class="nota">Puedes aceptar una solicitud compatible con la capacidad de tu vehículo.</p><div class="viajes-grid" id="driverRequests"><p>No hay solicitudes pendientes.</p></div></div>
+     <div class="seccion-viajes"><h3>Mis servicios</h3><div class="viajes-grid" id="driverTrips"><p>Aún no tienes servicios asignados.</p></div></div>
+     <div class="mensaje" id="driverMsg"></div>
+    </section>
+    <section class="tarjeta dashboard" id="mi-espacio">
+     <div class="dashboard-head">
+      <div>
+       <h2>Mi espacio YANY</h2>
+       <p>Hola, <strong id="welcomeName">pasajera</strong>. Aquí puedes consultar tus viajes.</p>
+      </div>
+      <button class="boton secundario" id="logoutButton" type="button">Cerrar sesión</button>
+     </div>
+     <div class="cuadricula">
+      <div class="mini">Viajes activos<strong id="myActiveTotal">0</strong></div>
+      <div class="mini">Viajes en historial<strong id="myHistoryTotal">0</strong></div>
+      <div class="mini">Total de mis viajes<strong id="myTripTotal">0</strong></div>
+     </div>
+     <div class="seccion-viajes">
+      <h3>Mis viajes en el momento</h3>
+      <div class="viajes-grid" id="myActiveTrips"><p>Aún no tienes viajes activos.</p></div>
+     </div>
+     <div class="seccion-viajes">
+      <h3>Mi historial de viajes</h3>
+      <div class="viajes-grid" id="myHistoryTrips"><p>Aún no tienes viajes en tu historial.</p></div>
+     </div>
+     <div class="perfil-panel" id="mi-perfil">
+      <h3>Mi perfil</h3>
+      <div class="perfil-grid">
+       <div><span>Nombre</span><strong id="profileName">—</strong></div>
+       <div><span>Correo electrónico</span><strong id="profileEmail">—</strong></div>
+       <div><span>Teléfono</span><strong id="profilePhone">—</strong></div>
+       <div><span>Contacto de emergencia</span><strong id="profileEmergency">—</strong></div>
+       <div><span>Tipo de cuenta</span><strong id="profileType">—</strong></div>
+      </div>
+     </div>
+     <div class="mensaje" id="dashboardMsg"></div>
+    </section>
+   <section class="layout" id="solicitar">
+    <div class="tarjeta">
+     <h2>
+      Planea tu viaje
+     </h2>
+     <form id="tripForm">
+      <label for="origin">
+       PUNTO DE PARTIDA
+      </label>
+      <input id="origin" placeholder="Ej. ITM, Medell&iacute;n" required=""/>
+      <button class="boton secundario" id="useLocation" type="button">
+       ◎ Usar mi ubicaci&oacute;n actual
+      </button>
+      <label for="destination">
+       &iquest;A D&Oacute;NDE VAS?
+      </label>
+      <input id="destination" placeholder="Ej. Estadio Atanasio Girardot, Medell&iacute;n" required=""/>
+      <label for="serviceType">
+       TIPO DE SERVICIO
+      </label>
+      <select id="serviceType">
+       <option>
+        Viaje inmediato
+       </option>
+       <option>
+        Programar viaje
+       </option>
+      </select>
+      <label for="hasCompanion">¿Viajas acompañada?</label>
+      <select id="hasCompanion"><option value="no">No, viajo sola</option><option value="si">Sí, voy con un acompañante</option></select>
+      <div id="companionFields" hidden>
+       <label for="companionRelation">¿Quién te acompaña?</label>
+       <select id="companionRelation">
+        <option value="Esposo o pareja">Esposo o pareja</option>
+        <option value="Hijo o hija">Hijo o hija</option>
+        <option value="Padre o hermano">Padre o hermano</option>
+        <option value="Familiar">Otro familiar</option>
+        <option value="Otra persona autorizada">Otra persona autorizada</option>
+       </select>
+       <label for="companionCount">Cantidad de acompañantes</label>
+       <select id="companionCount"><option value="1">1 acompañante</option><option value="2">2 acompañantes</option><option value="3">3 acompañantes</option></select>
+       <label for="companionNotes">Información adicional (opcional)</label>
+       <input id="companionNotes" maxlength="160" placeholder="Ej. un niño de 5 años"/>
+      </div>
+      <label for="passengers">TOTAL DE PERSONAS (TÚ + ACOMPAÑANTES)</label>
+      <select id="passengers"><option value="1">1 persona</option><option value="2">2 personas</option><option value="3">3 personas</option><option value="4">4 personas</option></select>
+      <label for="distanceKm">DISTANCIA ESTIMADA DEL RECORRIDO (KM)</label>
+      <input id="distanceKm" type="number" min="0.1" max="500" step="0.1" placeholder="Ej. 8.5" required/>
+      <div class="perfil-panel" id="farePanel"><h3>Estimación del viaje</h3><p class="nota">Ingresa la distancia aproximada para calcular el valor antes de solicitar.</p><div class="perfil-grid"><div><span>Tarifa base</span><strong id="fareBase">$4.500</strong></div><div><span>Valor por kilómetro</span><strong id="farePerKm">$1.900</strong></div><div><span>Descuento de tu cuenta</span><strong id="fareDiscount">—</strong></div><div><span>Total estimado</span><strong id="fareTotal">—</strong></div></div><p class="nota" id="fareNote">La tarifa es aproximada y puede variar según las condiciones del recorrido.</p></div>
+      <div class="acciones">
+       <button id="showRoute" type="submit">
+        Ver mi ruta
+       </button>
+       <button disabled="" id="requestService" type="button">
+        Solicitar servicio
+       </button>
+      </div>
+      <div class="mensaje" id="message">
+      </div>
+     </form>
+    </div>
+    <div class="tarjeta">
+     <div class="cabecera-mapa">
+      <h2>
+       Tu recorrido en el mapa
+      </h2>
+      <span class="estado" id="routeStatus">
+       Mapa de Medell&iacute;n
+      </span>
+     </div>
+     <div id="mapa">
+      <iframe allowfullscreen="" id="googleMap" loading="eager" referrerpolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=Medell%C3%ADn%2C%20Antioquia%2C%20Colombia&amp;z=13&amp;output=embed" title="Google Maps de Medell&iacute;n">
+      </iframe>
+     </div>
+     <p class="nota">
+      El mapa muestra la ruta dentro de Google Maps. No se agrega un resumen de tiempo o distancia debajo.
+     </p>
+    </div>
+   </section>
+   <section class="tarjeta" id="actividad" style="margin-top:20px">
+    <h2>
+     Actividad de YANY
+    </h2>
+    <div class="cuadricula">
+     <div class="mini">
+      Viajes registrados
+      <strong id="tripTotal">
+       &mdash;
+      </strong>
+     </div>
+     <div class="mini">
+      Solicitudes pendientes
+      <strong id="pendingTotal">
+       &mdash;
+      </strong>
+     </div>
+     <div class="mini">
+      Alertas
+      <strong id="alertTotal">
+       &mdash;
+      </strong>
+     </div>
+    </div>
+    <div class="asignaciones">
+     <h3>
+      Conductoras asignadas
+     </h3>
+     <div id="assignedTrips">
+      Todav&iacute;a no hay viajes con conductora asignada.
+     </div>
+    </div>
+   </section>
+   <section class="tarjeta ayuda-panel" id="ayuda" style="margin-top:20px">
+    <h2>Ayuda y soporte</h2>
+    <p class="nota">Respuestas rápidas para usar YANY.</p>
+    <details>
+     <summary>¿Cómo solicito un viaje?</summary>
+     <p>Escribe el punto de partida y el destino, consulta la ruta en el mapa y selecciona “Solicitar servicio”.</p>
+    </details>
+    <details>
+     <summary>¿Dónde consulto mis viajes?</summary>
+     <p>En “Mi espacio” puedes ver tus viajes activos y el historial asociado a tu cuenta.</p>
+    </details>
+    <details>
+     <summary>¿Cómo sé quién fue asignada a mi viaje?</summary>
+     <p>Cuando haya una conductora asignada, sus datos y los del vehículo aparecerán en la tarjeta del viaje.</p>
+    </details>
+    <details>
+     <summary>¿Qué hago si no puedo iniciar sesión?</summary>
+     <p>Verifica que estés usando el correo con el que creaste tu cuenta. Si el problema continúa, contacta al equipo administrador de YANY.</p>
+    </details>
+   </section>
+   <details class="tarjeta admin">
+   </details>
+   </div>
+  </main>
+  <footer class="pie">
+   YANY &middot; Plataforma de movilidad
+  </footer>
+  <script>
+   // Atajo para obtener elementos por su identificador.
+  const $ = (id) => document.getElementById(id);
+  let rutaLista = false;
+
+  function message(texto, tipo) {
+    $('message').textContent = texto;
+    $('message').className = 'mensaje ' + tipo;
+  }
+
+  // Actualiza el mapa incrustado con el origen y el destino elegidos.
+  function mostrarMapa(origen, destino) {
+    const url =
+      'https://maps.google.com/maps?saddr=' +
+      encodeURIComponent(origen) +
+      '&daddr=' +
+      encodeURIComponent(destino) +
+      '&output=embed';
+
+    $('googleMap').src = url;
+    $('routeStatus').textContent = 'Ruta en Google Maps';
+  }
+
+  // Muestra la ruta antes de permitir que se registre la solicitud.
+  $('tripForm').addEventListener('submit', (event) => {
+    event.preventDefault();
+
+    const origen = $('origin').value.trim();
+    const destino = $('destination').value.trim();
+
+    if (!origen || !destino) return;
+
+    mostrarMapa(origen, destino);
+    rutaLista = true;
+    $('requestService').disabled = false;
+    message(
+      'La ruta se está mostrando en Google Maps. Ya puedes solicitar el servicio.',
+      'ok'
+    );
+  });
