@@ -5,6 +5,7 @@ from estructuras.pila import Pila
 from estructuras.arbol import Arbol
 from gestores.gestor_archivos import GestorArchivos
 from yany.alerta import Alerta
+from yany.excepciones import ViajeNoEncontrado, ConductoraNoDisponible, ColaVaciaError
 
 class GestorYANY:
     def __init__(self):
@@ -29,6 +30,26 @@ class GestorYANY:
         # para darle un id distinto a cada alerta
         self.__contador_alertas = 1
 
+    # Getters para consultar las estructuras desde el menu
+    @property
+    def lista_pasajeras(self):
+        return self.__lista_pasajeras
+
+    @property
+    def lista_conductoras(self):
+        return self.__lista_conductoras
+
+    @property
+    def lista_viajes(self):
+        return self.__lista_viajes
+
+    @property
+    def pila_historial(self):
+        return self.__pila_historial
+
+    @property
+    def arbol_zonas(self):
+        return self.__arbol_zonas
 
     def registrar_pasajera(self, pasajera):
         # revisar que no este repetida (por id)
@@ -67,7 +88,8 @@ class GestorYANY:
         while not self.__cola_solicitudes.esta_vacia():
             conductora = self.__buscar_conductora_disponible()
             if conductora is None:
-                # si no hay conductoras libres, las demas solicitudes esperan
+                if asignados == 0:
+                    raise ConductoraNoDisponible("No hay conductoras disponibles.")
                 break
  
             # sacar la primera solicitud de la cola y asignarle la conductora
@@ -91,7 +113,7 @@ class GestorYANY:
         # buscar el viaje, si no existe no se crea la alerta
         viaje = self.__buscar_viaje(id_viaje)
         if viaje is None:
-            return None
+            raise ViajeNoEncontrado(f"No se encontró el viaje {id_viaje}.")
  
         # crear la alerta con un id nuevo y la hora de ahora
         hora = datetime.now().strftime("%H:%M")
@@ -106,16 +128,15 @@ class GestorYANY:
         # sacar la siguiente alerta de la cola (la que lleva mas tiempo)
         alerta = self.__cola_alertas.sacar_cola()
         if alerta is None:
-            return None
+            raise ColaVaciaError("No hay alertas pendientes por atender.")
         alerta.atender()
         return alerta
 
- 
     def finalizar_viaje(self, id_viaje):
         # 1. buscar el viaje en lista_viajes
         viaje = self.__buscar_viaje(id_viaje)
         if viaje is None:
-            return False
+            raise ViajeNoEncontrado(f"No se encontró el viaje {id_viaje}.")
  
         # 2. cambiar su estado a finalizado
         viaje.cambiar_estado("Finalizado")
@@ -133,7 +154,7 @@ class GestorYANY:
         self.__archivos.guardar_pasajeras(self.__lista_pasajeras)
         self.__archivos.guardar_conductoras(self.__lista_conductoras)
         self.__archivos.guardar_viajes(self.__lista_viajes)
-        # falta: self.__archivos.guardar_zonas(self.__arbol_zonas)
+        self.__archivos.guardar_zonas(self.__arbol_zonas)
  
     def cargar_todo(self):
         # el orden importa: los viajes necesitan las pasajeras y conductoras
@@ -141,7 +162,7 @@ class GestorYANY:
         self.__lista_conductoras = self.__archivos.cargar_conductoras()
         self.__lista_viajes = self.__archivos.cargar_viajes(
             self.__lista_pasajeras, self.__lista_conductoras)
-        # falta: self.__arbol_zonas = self.__archivos.cargar_zonas()
+        self.__arbol_zonas = self.__archivos.cargar_zonas()
  
         # el historial no se guarda: se arma de nuevo con los viajes finalizados
         self.__pila_historial = Pila()
