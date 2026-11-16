@@ -7,17 +7,20 @@ class NodoArbol:
     @property
     def dato(self):
         return self.__dato
+
     @property
     def izquierdo(self):
         return self.__izquierdo
+
     @property
     def derecho(self):
         return self.__derecho
 
-    #SETTERS
+    # SETTERS
     @izquierdo.setter
     def izquierdo(self, izquierdo):
         self.__izquierdo = izquierdo
+
     @derecho.setter
     def derecho(self, derecho):
         self.__derecho = derecho
@@ -31,7 +34,7 @@ class Arbol:
     def raiz(self):
         return self.__raiz
 
-    #INSERTA una zona ordenada por su id
+    # INSERTA una zona ordenada por su id
     def insertar(self, zona):
         if self.__raiz is None:
             self.__raiz = NodoArbol(zona)
@@ -41,6 +44,7 @@ class Arbol:
     def _insertar_en(self, nodo, zona):
         if zona.id == nodo.dato.id:
             raise ValueError("Ya existe una zona con el id " + str(zona.id) + ".")
+
         if zona.id < nodo.dato.id:
             if nodo.izquierdo is None:
                 nodo.izquierdo = NodoArbol(zona)
@@ -52,19 +56,22 @@ class Arbol:
             else:
                 self._insertar_en(nodo.derecho, zona)
 
-    # busca una zona por id, si no existe devuele None
+    # BUSCA una zona por id, si no existe devuelve None
     def buscar(self, id):
         actual = self.__raiz
+
         while actual is not None:
             if id == actual.dato.id:
                 return actual.dato
+
             if id < actual.dato.id:
                 actual = actual.izquierdo
             else:
                 actual = actual.derecho
+
         return None
 
-    # devuelve las zonas ordenadas por id (izquerda, raiz, derecha)
+    # DEVUELVE las zonas ordenadas por id (izquierda, raiz, derecha)
     def inorden(self):
         zonas = []
         self._inorden_en(self.__raiz, zonas)
