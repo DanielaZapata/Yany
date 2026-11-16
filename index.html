@@ -899,3 +899,255 @@ button:disabled {
               if (!respuesta.ok) {
                 throw new Error(resultado.error || 'No se pudo aceptar la solicitud.');
               }
+              
+        // Actualiza las listas sin mostrar un mensaje con el número del viaje.
+              const mensaje = $('driverMsg');
+              mensaje.textContent = '';
+              mensaje.className = 'mensaje';
+              await cargarSolicitudesConductora();
+              await actualizarMiEspacio();
+            } catch (error) {
+              mostrarMensajeAuth('driverMsg', error.message, 'error');
+              botonAceptar.disabled = false;
+            }
+          });
+
+          tarjeta.appendChild(botonAceptar);
+          contenedor.appendChild(tarjeta);
+        });
+      }
+
+      mostrarListaViajes(
+        'driverTrips',
+        (viajes.activos || []).concat(viajes.historial || []),
+        'Aún no tienes servicios asignados.'
+      );
+    } catch (error) {
+      $('driverRequests').textContent = 'No se pudieron cargar las solicitudes. Verifica la conexión con YANY.';
+      mostrarMensajeAuth('driverMsg', error.message, 'error');
+    }
+  }
+
+  $('showLogin').addEventListener('click', () => {
+    $('loginForm').hidden = false;
+    $('registerForm').hidden = true;
+  });
+
+  $('showRegister').addEventListener('click', () => {
+    $('loginForm').hidden = true;
+    $('registerForm').hidden = false;
+  });
+
+  function seleccionarTipoRegistro(rol) {
+    $('registerRole').value = rol;
+    const esConductora = rol === 'conductora';
+    $('passengerRegisterFields').hidden = esConductora;
+    $('driverRegisterFields').hidden = !esConductora;
+    $('registerEmergency').required = !esConductora;
+    ['registerPlate','registerMake','registerModel'].forEach(id => $(id).required = esConductora);
+    $('rolePassengerButton').classList.toggle('selected', !esConductora);
+    $('roleDriverButton').classList.toggle('selected', esConductora);
+    $('rolePassengerButton').setAttribute('aria-pressed', String(!esConductora));
+    $('roleDriverButton').setAttribute('aria-pressed', String(esConductora));
+    $('registerSubmitButton').textContent = esConductora
+      ? 'Crear cuenta de conductora y entrar'
+      : 'Crear cuenta de pasajera y entrar';
+  }
+  $('rolePassengerButton').addEventListener('click', () => seleccionarTipoRegistro('pasajera'));
+  $('roleDriverButton').addEventListener('click', () => seleccionarTipoRegistro('conductora'));
+  seleccionarTipoRegistro('pasajera');
+
+  $('hasCompanion').addEventListener('change', () => {
+    const acompana = $('hasCompanion').value === 'si';
+    $('companionFields').hidden = !acompana;
+    $('passengers').value = acompana ? String(1 + Number($('companionCount').value)) : '1';
+  });
+  $('companionCount').addEventListener('change', () => {
+    $('passengers').value = String(1 + Number($('companionCount').value));
+  });
+  $('distanceKm').addEventListener('input', cotizarViaje);
+  let tarifaActual = null;
+  function moneda(valor) { return new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(Number(valor || 0)); }
+  let temporizadorCotizacion;
+  async function cotizarViaje() {
+    const km = Number($('distanceKm').value);
+    if (!Number.isFinite(km) || km <= 0) { $('fareDiscount').textContent='—'; $('fareTotal').textContent='—'; tarifaActual=null; return; }
+    clearTimeout(temporizadorCotizacion);
+    temporizadorCotizacion = setTimeout(async () => {
+      try {
+        const r = await fetch('/api/tarifa?distancia_km=' + encodeURIComponent(km));
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'No se pudo calcular la tarifa.');
+        tarifaActual=data;
+        $('fareDiscount').textContent = data.descuento_porcentaje + '% · ' + moneda(data.descuento);
+        $('fareTotal').textContent = moneda(data.total_estimado);
+        $('fareNote').textContent = data.nota;
+      } catch (e) { $('fareNote').textContent=e.message; }
+    }, 250);
+  }
+
+  $('loginForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const datos = formData(event.currentTarget);
+    try {
+      const respuesta = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(datos)
+      });
+      const resultado = await respuesta.json();
+      if (!respuesta.ok) throw new Error(resultado.error || 'No se pudo iniciar sesión.');
+      mostrarAplicacion(resultado.usuario);
+    } catch (error) {
+      mostrarMensajeAuth('loginMsg', error.message, 'error');
+    }
+  });
+
+  $('registerForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const datos = formData(event.currentTarget);
+    try {
+      const respuesta = await fetch('/api/auth/registro', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(datos)
+      });
+      const resultado = await respuesta.json();
+      if (!respuesta.ok) throw new Error(resultado.error || 'No se pudo crear la cuenta.');
+      mostrarAplicacion(resultado.usuario);
+    } catch (error) {
+      mostrarMensajeAuth('registerMsg', error.message, 'error');
+    }
+  });
+
+  async function cerrarSesionUI() {
+    await fetch('/api/auth/logout', {method: 'POST'});
+    $('appContent').hidden = true;
+    $('authPanel').hidden = false;
+    $('loginForm').reset();
+    $('registerForm').reset();
+    $('loginForm').hidden = false;
+    $('registerForm').hidden = true;
+    rutaLista = false;
+    $('requestService').disabled = true;
+    usuarioEnSesion = null;
+  }
+  $('logoutButton').addEventListener('click', cerrarSesionUI);
+  $('driverLogoutButton').addEventListener('click', cerrarSesionUI);
+
+  function tarjetaViaje(viaje) {
+    const tarjeta = document.createElement('article');
+    tarjeta.className = 'viaje-card';
+    const titulo = document.createElement('strong');
+    titulo.textContent = 'Viaje #' + viaje.id;
+    const estado = document.createElement('span');
+    estado.className = 'estado-viaje' + (['Pendiente', 'Conductora asignada', 'En curso'].includes(viaje.estado) ? ' activo' : '');
+    estado.textContent = viaje.estado === 'Pendiente' ? 'Pendiente de aceptación' : (viaje.estado || 'Sin estado');
+    const origen = document.createElement('p');
+    origen.textContent = 'Origen: ' + viaje.origen;
+    const destino = document.createElement('p');
+    destino.textContent = 'Destino: ' + viaje.destino;
+    const fecha = document.createElement('p');
+    fecha.textContent = 'Fecha: ' + (viaje.fecha_solicitud || 'No disponible');
+    tarjeta.append(titulo, document.createTextNode(' '), estado, origen, destino, fecha);
+    if (viaje.tarifa) { const precio=document.createElement('p'); precio.textContent='Total estimado: '+moneda(viaje.tarifa.total_estimado)+' · Descuento: '+viaje.tarifa.descuento_porcentaje+'%'; tarjeta.appendChild(precio); }
+    if (viaje.acompanante && viaje.acompanante.viaja_acompanada) { const acomp=document.createElement('p'); acomp.textContent='Acompañante: '+viaje.acompanante.relacion+' · '+viaje.acompanante.cantidad+' persona(s)'+(viaje.acompanante.notas?' · '+viaje.acompanante.notas:''); tarjeta.appendChild(acomp); }
+    if (viaje.estado === 'Conductora asignada' || viaje.estado === 'En curso') {
+      const accion = document.createElement('button');
+      accion.type = 'button';
+      accion.textContent = viaje.estado === 'Conductora asignada' ? 'Iniciar viaje' : 'Finalizar viaje';
+      accion.addEventListener('click', async () => {
+        accion.disabled = true;
+        const endpoint = viaje.estado === 'Conductora asignada' ? 'iniciar' : 'finalizar';
+        try {
+          const respuesta = await fetch('/api/viajes/' + viaje.id + '/' + endpoint, {method: 'POST'});
+          const resultado = await respuesta.json();
+          if (!respuesta.ok) throw new Error(resultado.error || 'No se pudo actualizar el viaje.');
+          await actualizarMiEspacio();
+          if (usuarioEnSesion && usuarioEnSesion.rol === 'conductora') await cargarSolicitudesConductora();
+          else await actualizarResumen();
+        } catch (error) {
+          mostrarMensajeAuth('dashboardMsg', error.message, 'error');
+          accion.disabled = false;
+        }
+      });
+      tarjeta.appendChild(accion);
+    }
+    if (viaje.conductora) {
+      const conductora = document.createElement('p');
+      const vehiculo = viaje.conductora.vehiculo || {};
+      conductora.textContent = 'Conductora: ' + viaje.conductora.nombre +
+        ' · Vehículo: ' + [vehiculo.marca, vehiculo.modelo].filter(Boolean).join(' ') +
+        ' · Placa: ' + (vehiculo.placa || 'Pendiente');
+      tarjeta.appendChild(conductora);
+    } else if (viaje.estado === 'Pendiente') {
+      const asignacion = document.createElement('p');
+      asignacion.textContent = 'Estamos buscando una conductora para tu viaje.';
+      tarjeta.appendChild(asignacion);
+    }
+    return tarjeta;
+  }
+
+  function mostrarListaViajes(id, viajes, textoVacio) {
+    const contenedor = $(id);
+    contenedor.replaceChildren();
+    if (!viajes.length) {
+      const mensajeVacio = document.createElement('p');
+      mensajeVacio.textContent = textoVacio;
+      contenedor.appendChild(mensajeVacio);
+      return;
+    }
+    viajes.forEach((viaje) => contenedor.appendChild(tarjetaViaje(viaje)));
+  }
+
+  async function actualizarMiEspacio() {
+    try {
+      const respuesta = await fetch('/api/mis-viajes');
+      const datos = await respuesta.json();
+      if (!respuesta.ok) throw new Error(datos.error || 'No se pudieron cargar tus viajes.');
+      $('myActiveTotal').textContent = datos.activos.length;
+      $('myHistoryTotal').textContent = datos.historial.length;
+      $('myTripTotal').textContent = datos.total;
+      mostrarListaViajes('myActiveTrips', datos.activos, 'Aún no tienes viajes activos.');
+      mostrarListaViajes('myHistoryTrips', datos.historial, 'Aún no tienes viajes en tu historial.');
+      $('dashboardMsg').className = 'mensaje';
+    } catch (error) {
+      mostrarMensajeAuth('dashboardMsg', error.message, 'error');
+    }
+  }
+
+  // Recupera la sesión si la pasajera actualiza la página.
+  async function iniciarYany() {
+    try {
+      const respuesta = await fetch('/api/auth/me');
+      const datos = await respuesta.json();
+      if (datos.autenticada) {
+        mostrarAplicacion(datos.usuario);
+      } else {
+        $('authPanel').hidden = false;
+        $('appContent').hidden = true;
+      }
+    } catch (error) {
+      mostrarMensajeAuth('loginMsg', 'No se pudo conectar con YANY. Verifica que app.py esté activo.', 'error');
+    }
+  }
+
+  // Carga inicial de la aplicación y de la sesión de la pasajera.
+  iniciarYany();
+  
+  // Permite mostrar u ocultar la contraseña en el inicio de sesión y el registro.
+  document.querySelectorAll('.password-toggle').forEach((button) => {
+    button.addEventListener('click', () => {
+      const input = document.getElementById(button.dataset.target);
+      if (!input) return;
+      const mostrar = input.type === 'password';
+      input.type = mostrar ? 'text' : 'password';
+      button.textContent = mostrar ? '🙈' : '👁️';
+      button.setAttribute('aria-pressed', String(mostrar));
+      button.setAttribute('aria-label', mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña');
+      button.title = mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña';
+    });
+  });
+</script>
+ </body>
+</html>
