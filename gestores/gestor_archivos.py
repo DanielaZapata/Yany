@@ -7,7 +7,14 @@ from yany.pasajera import Pasajera
 from yany.conductora import Conductora
 from yany.vehiculo import Vehiculo
 from yany.resena import Resena
-from yany.viaje import Viaje
+from yany.zona import Zona
+from estructuras.arbol import Arbol
+from yany.pasajeraPremium import PasajeraPremium
+from yany.mantenimiento import Mantenimiento
+from yany.viajeNormal import ViajeNormal
+from yany.ViajeConAcompanante import ViajeConAcompanante
+from yany.excepciones import ArchivoInvalidoError
+
 
 class GestorArchivos:
     def __init__(self, ruta_datos="datos"):
@@ -27,46 +34,70 @@ class GestorArchivos:
         # si el archivo todavia no existe, devuelve una lista vacia
         if not os.path.exists(ruta):
             return []
-        with open(ruta, "r", encoding="utf-8") as archivo:
-            return json.load(archivo)
+        try:
+            with open(ruta, "r", encoding="utf-8") as archivo:
+                return json.load(archivo)
+        except json.JSONDecodeError:
+            raise ArchivoInvalidoError(f"El archivo '{nombre_archivo}' está dañado o no es válido.")
 
-    #PASAJERAS
+    # BUSCAR en una lista el objeto que tenga ese id
+    def __buscar_por_id(self, lista, id):
+        for x in lista.mostrar():
+            if x.id == id:
+                return x
+        return None
+
+
+    # PASAJERAS
     def guardar_pasajeras(self, lista):
         datos = []
         for p in lista.mostrar():
-            datos.append({"id": p.id, "nombre": p.nombre,
-                        "telefono": p.telefono,
-                        "contacto_emergencia": p.contacto_emergencia})
+            if isinstance(p, PasajeraPremium):
+                datos.append({"tipo": "premium", "id": p.id, "nombre": p.nombre,
+                              "telefono": p.telefono,
+                              "contacto_emergencia": p.contacto_emergencia,
+                              "porcentaje_descuento": p.porcentaje_descuento})
+            else:
+                datos.append({"tipo": "normal", "id": p.id, "nombre": p.nombre,
+                              "telefono": p.telefono,
+                              "contacto_emergencia": p.contacto_emergencia})
         self.__guardar_json("pasajeras.json", datos)
 
     def cargar_pasajeras(self):
         lista = Lista()
         datos = self.__cargar_json("pasajeras.json")
         for d in datos:
-            pasajera = Pasajera(d["id"], d["nombre"], d["telefono"], d["contacto_emergencia"])
+            if d.get("tipo") == "premium":
+                pasajera = PasajeraPremium(d["id"], d["nombre"], d["telefono"],
+                                           d["contacto_emergencia"], d["porcentaje_descuento"])
+            else:
+                pasajera = Pasajera(d["id"], d["nombre"], d["telefono"], d["contacto_emergencia"])
             lista.agregar(pasajera)
         return lista
+
 
     # CONDUCTORAS
     def guardar_conductoras(self, lista):
         datos = []
         for c in lista.mostrar():
-            # el vehiculo es un objeto, se guarda como un diccionario
-            # (por ahora no se guardan sus mantenimientos)
             vehiculo = None
             if c.vehiculo is not None:
+                mantenimientos = []
+                for m in c.vehiculo.mantenimientos:
+                    mantenimientos.append({"fecha": m.fecha,
+                                           "descripcion": m.descripcion})
+
                 vehiculo = {"placa": c.vehiculo.placa,
                             "color": c.vehiculo.color,
-                            "anio": c.vehiculo.anio}
- 
-            # las resenas son una lista de objetos, se guardan como
-            # una lista de diccionarios
+                            "anio": c.vehiculo.anio,
+                            "mantenimientos": mantenimientos}
+
             resenas = []
             for r in c.resenas:
                 resenas.append({"id": r.id,
                                 "calificacion": r.calificacion,
                                 "comentario": r.comentario})
- 
+
             datos.append({"id": c.id, "nombre": c.nombre,
                           "telefono": c.telefono,
                           "certificada": c.certificada,
@@ -74,30 +105,31 @@ class GestorArchivos:
                           "vehiculo": vehiculo,
                           "resenas": resenas})
         self.__guardar_json("conductoras.json", datos)
- 
+
     def cargar_conductoras(self):
         lista = Lista()
         datos = self.__cargar_json("conductoras.json")
         for d in datos:
-            # reconstruir el vehiculo (si tenia uno)
             vehiculo = None
             if d["vehiculo"] is not None:
                 v = d["vehiculo"]
                 vehiculo = Vehiculo(v["placa"], v["color"], v["anio"])
- 
-            # reconstruir las resenas
+                for m in v.get("mantenimientos", []):
+                    vehiculo.registrar_mantenimiento(Mantenimiento(m["fecha"], m["descripcion"]))
+
             resenas = []
             for r in d["resenas"]:
                 resenas.append(Resena(r["id"], r["calificacion"],
                                       r["comentario"]))
- 
+
             conductora = Conductora(d["id"], d["nombre"], d["telefono"],
                                     d["certificada"], d["disponible"],
                                     vehiculo, resenas)
             lista.agregar(conductora)
         return lista
 
-      # VIAJES
+
+    # VIAJES
     def guardar_viajes(self, lista):
         datos = []
         for v in lista.mostrar():
@@ -105,16 +137,25 @@ class GestorArchivos:
             conductora_id = None
             if v.conductora is not None:
                 conductora_id = v.conductora.id
- 
-            # solo se guardan los ids de la pasajera y la conductora
-            datos.append({"id": v.id,
-                          "pasajera_id": v.pasajera.id,
-                          "conductora_id": conductora_id,
-                          "origen": v.origen,
-                          "destino": v.destino,
-                          "estado": v.estado})
+
+            if isinstance(v, ViajeConAcompanante):
+                datos.append({"tipo": "acompanante", "id": v.id,
+                              "pasajera_id": v.pasajera.id,
+                              "conductora_id": conductora_id,
+                              "origen": v.origen,
+                              "destino": v.destino,
+                              "estado": v.estado,
+                              "num_acompanantes": v.num_acompanantes,
+                              "lleva_mascota": v.lleva_mascota})
+            else:
+                datos.append({"tipo": "normal", "id": v.id,
+                              "pasajera_id": v.pasajera.id,
+                              "conductora_id": conductora_id,
+                              "origen": v.origen,
+                              "destino": v.destino,
+                              "estado": v.estado})
         self.__guardar_json("viajes.json", datos)
- 
+
     def cargar_viajes(self, lista_pasajeras, lista_conductoras):
         lista = Lista()
         datos = self.__cargar_json("viajes.json")
@@ -125,16 +166,31 @@ class GestorArchivos:
             if d["conductora_id"] is not None:
                 conductora = self.__buscar_por_id(lista_conductoras,
                                                   d["conductora_id"])
- 
-            viaje = Viaje(d["id"], pasajera, conductora,
-                          d["origen"], d["destino"], d["estado"])
+
+            if d.get("tipo") == "acompanante":
+                viaje = ViajeConAcompanante(d["id"], pasajera, conductora,
+                                            d["origen"], d["destino"],
+                                            d["num_acompanantes"], d["lleva_mascota"],
+                                            d["estado"])
+            else:
+                viaje = ViajeNormal(d["id"], pasajera, conductora,
+                                    d["origen"], d["destino"], d["estado"])
             lista.agregar(viaje)
         return lista
 
+      # ZONAS
+    def guardar_zonas(self, arbol):
+        datos = []
+        # se recorre en preorden: asi, al cargar, el arbol queda con la misma forma
+        for z in arbol.preorden():
+            datos.append({"id": z.id, "nombre": z.nombre})
+        self.__guardar_json("zonas.json", datos)
 
-    # BUSCAR en una lista el objeto que tenga ese id
-    def __buscar_por_id(self, lista, id):
-        for x in lista.mostrar():
-            if x.id == id:
-                return x
-        return None
+    def cargar_zonas(self):
+        arbol = Arbol()
+        datos = self.__cargar_json("zonas.json")
+        for d in datos:
+            arbol.insertar(Zona(d["id"], d["nombre"]))
+        return arbol
+
+    

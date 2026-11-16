@@ -1,11 +1,3 @@
-# prueba_completa.py
-# Prueba de punta a punta del GestorYANY con las clases reales
-#
-# OJO: esta prueba guarda en la carpeta datos los archivos pasajeras.json,
-# conductoras.json y viajes.json, y reemplaza lo que ya tengan adentro.
-#
-# Ejecutar desde la carpeta Yany con:  python -m pruebas.prueba_completa
-
 import os
 
 from gestores.gestor_yany import GestorYANY

@@ -28,3 +28,5 @@ class Pasajera(Persona):
     def mostrar_info(self):
         info_persona = super().mostrar_info()
         return f"{info_persona}, y el contacto de emergencia es: {self.__contacto_emergencia}." 
+
+    
