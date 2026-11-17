@@ -502,8 +502,8 @@ button:disabled {
       <label for="passengers">TOTAL DE PERSONAS (TÚ + ACOMPAÑANTES)</label>
       <select id="passengers"><option value="1">1 persona</option><option value="2">2 personas</option><option value="3">3 personas</option><option value="4">4 personas</option></select>
       <label for="distanceKm">DISTANCIA ESTIMADA DEL RECORRIDO (KM)</label>
-      <input id="distanceKm" type="number" min="0.1" max="500" step="0.1" placeholder="Ej. 8.5" required/>
-      <div class="perfil-panel" id="farePanel"><h3>Estimación del viaje</h3><p class="nota">Ingresa la distancia aproximada para calcular el valor antes de solicitar.</p><div class="perfil-grid"><div><span>Tarifa base</span><strong id="fareBase">$4.500</strong></div><div><span>Valor por kilómetro</span><strong id="farePerKm">$1.900</strong></div><div><span>Descuento de tu cuenta</span><strong id="fareDiscount">—</strong></div><div><span>Total estimado</span><strong id="fareTotal">—</strong></div></div><p class="nota" id="fareNote">La tarifa es aproximada y puede variar según las condiciones del recorrido.</p></div>
+      <input id="distanceKm" type="number" min="0.1" max="500" step="0.1" placeholder="Se calcula al ver la ruta"/>
+      <div class="perfil-panel" id="farePanel"><h3>Estimación del viaje</h3><p class="nota">Pulsa “Ver mi ruta” y los kilómetros se calculan solos. Si no se pueden calcular, escríbelos tú.</p><div class="perfil-grid"><div><span>Tarifa base</span><strong id="fareBase">$4.500</strong></div><div><span>Valor por kilómetro</span><strong id="farePerKm">$1.900</strong></div><div><span>Descuento de tu cuenta</span><strong id="fareDiscount">—</strong></div><div><span>Total estimado</span><strong id="fareTotal">—</strong></div></div><p class="nota" id="fareNote">La tarifa es aproximada y puede variar según las condiciones del recorrido.</p></div>
       <div class="acciones">
        <button id="showRoute" type="submit">
         Ver mi ruta
@@ -616,7 +616,7 @@ button:disabled {
   }
 
   // Muestra la ruta antes de permitir que se registre la solicitud.
-  $('tripForm').addEventListener('submit', (event) => {
+  $('tripForm').addEventListener('submit', async (event) => {
     event.preventDefault();
 
     const origen = $('origin').value.trim();
@@ -627,11 +627,39 @@ button:disabled {
     mostrarMapa(origen, destino);
     rutaLista = true;
     $('requestService').disabled = false;
-    message(
-      'La ruta se está mostrando en Google Maps. Ya puedes solicitar el servicio.',
-      'ok'
-    );
+    message('La ruta se está mostrando en Google Maps. Calculando la distancia...', 'ok');
+    await calcularDistancia(origen, destino);
   });
+
+  // Pide al servidor los kilómetros de la ruta y calcula el precio con ellos.
+  let kmAutomatico = false;
+  async function calcularDistancia(origen, destino) {
+    try {
+      const r = await fetch('/api/ruta?origen=' + encodeURIComponent(origen) + '&destino=' + encodeURIComponent(destino));
+      const datos = await r.json();
+      if (!r.ok) throw new Error(datos.error || 'No se pudo calcular la distancia.');
+      $('distanceKm').value = datos.distancia_km;
+      kmAutomatico = true;
+      cotizarViaje();
+      message('Ruta lista: ' + datos.distancia_km + ' km. Ya puedes solicitar el servicio.', 'ok');
+    } catch (error) {
+      kmAutomatico = false;
+      message('La ruta se muestra en el mapa. ' + error.message + ' Escribe los kilómetros para ver el precio.', 'error');
+    }
+  }
+
+  // Si cambian el origen o el destino, la ruta y los kilómetros calculados ya no sirven.
+  function reiniciarRuta() {
+    rutaLista = false;
+    $('requestService').disabled = true;
+    if (kmAutomatico) {
+      $('distanceKm').value = '';
+      kmAutomatico = false;
+      cotizarViaje();
+    }
+  }
+  ['origin', 'destination'].forEach((id) => $(id).addEventListener('input', reiniciarRuta));
+  $('distanceKm').addEventListener('input', () => { kmAutomatico = false; });
 
 // Permite usar la ubicación actual como punto de partida.
   $('useLocation').addEventListener('click', () => {
@@ -648,6 +676,7 @@ button:disabled {
           position.coords.longitude.toFixed(6);
 
         $('origin').value = coordenadas;
+        reiniciarRuta();
         $('googleMap').src =
           'https://maps.google.com/maps?q=' +
           encodeURIComponent(coordenadas) +
@@ -670,7 +699,7 @@ button:disabled {
 
     const distancia = Number($('distanceKm').value);
     if (!Number.isFinite(distancia) || distancia <= 0) {
-      message('Indica la distancia estimada en kilómetros para calcular el precio.', 'error');
+      message('Escribe los kilómetros del recorrido, o pulsa “Ver mi ruta” para que se calculen solos.', 'error');
       return;
     }
     const acompana = $('hasCompanion').value === 'si';

@@ -1,5 +1,6 @@
 """Adaptador web de YANY."""
-import json, os, re
+import json, os, re, time
+import urllib.request, urllib.parse
 from datetime import datetime
 from functools import wraps
 from flask import Flask, jsonify, request, session, send_from_directory
@@ -239,6 +240,43 @@ def resenar(tid):
     t['resena']={'calificacion':calificacion,'comentario':comentario,'fecha':datetime.now().strftime('%Y-%m-%d %H:%M')}
     guardar_datos()
     return jsonify(ok=True,viaje=viaje_json(t)),201
+# --- Distancia del recorrido: se calcula con OpenStreetMap (Nominatim) y OSRM, sin clave de API. ---
+_cache_geo = {}
+_ultima_consulta = [0.0]
+
+def _pedir_json(url):
+    req = urllib.request.Request(url, headers={'User-Agent': 'YANY-proyecto-ITM/1.0'})
+    with urllib.request.urlopen(req, timeout=8) as r:
+        return json.load(r)
+
+def _geocodificar(texto):
+    # Devuelve (latitud, longitud). Acepta coordenadas "6.25, -75.56" o una dirección escrita.
+    m = re.fullmatch(r'\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*', texto)
+    if m: return float(m.group(1)), float(m.group(2))
+    if texto.lower() in _cache_geo: return _cache_geo[texto.lower()]
+    espera = 1.1 - (time.time() - _ultima_consulta[0])  # Nominatim pide máximo 1 consulta por segundo
+    if espera > 0: time.sleep(espera)
+    url = 'https://nominatim.openstreetmap.org/search?' + urllib.parse.urlencode({'q': texto, 'format': 'jsonv2', 'limit': 1, 'countrycodes': 'co'})
+    datos = _pedir_json(url)
+    _ultima_consulta[0] = time.time()
+    if not datos: return None
+    _cache_geo[texto.lower()] = (float(datos[0]['lat']), float(datos[0]['lon']))
+    return _cache_geo[texto.lower()]
+
+@app.get('/api/ruta')
+@login_required
+def ruta():
+    origen = request.args.get('origen', '').strip(); destino = request.args.get('destino', '').strip()
+    if not origen or not destino: return jsonify(error='Ingresa el origen y el destino.'), 400
+    try:
+        a = _geocodificar(origen); b = _geocodificar(destino)
+        if not a: return jsonify(error='No pudimos ubicar el punto de partida en el mapa.'), 404
+        if not b: return jsonify(error='No pudimos ubicar el destino en el mapa.'), 404
+        datos = _pedir_json('https://router.project-osrm.org/route/v1/driving/%s,%s;%s,%s?overview=false' % (a[1], a[0], b[1], b[0]))
+        km = max(0.1, round(datos['routes'][0]['distance'] / 1000, 1))
+    except (OSError, ValueError, KeyError, IndexError):
+        return jsonify(error='No pudimos calcular la distancia en este momento.'), 502
+    return jsonify(distancia_km=km)
 @app.get('/api/alertas')
 def alertas(): return jsonify([])
 @app.get('/api/salud')
