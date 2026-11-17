@@ -316,7 +316,12 @@ button:disabled {
 .role-choice small{font-size:12px;line-height:1.4;color:#cbb5df;font-weight:400}
 .role-choice.selected{border:2px solid var(--morado);background:#3b2054;box-shadow:0 0 0 2px #d080ff22}
 @media(max-width:560px){.role-options{grid-template-columns:1fr}.role-choice{min-height:110px}}
-
+.resena-form{margin-top:12px;padding:12px;background:#2a1740;border-radius:10px}
+.resena-form label{margin-top:0}
+.resena-form button{width:100%;margin-top:6px}
+.resena-ver{margin-top:10px;padding:10px 12px;background:#2a1740;border-radius:10px;font-size:13px}
+.resena-ver p{margin:6px 0 0}
+.estrellas{color:#f0b8ff;letter-spacing:2px}
 
 </style>
  </head>
@@ -412,7 +417,7 @@ button:disabled {
    <div id="appContent" hidden>
     <section class="tarjeta dashboard" id="driverSpace" hidden>
      <div class="dashboard-head"><div><h2>Espacio de conductora</h2><p>Bienvenida, <strong id="driverWelcome">conductora</strong>. Aquí puedes revisar y aceptar solicitudes.</p></div><button class="boton secundario" id="driverLogoutButton" type="button">Cerrar sesión</button></div>
-     <div class="perfil-panel"><h3>Mi vehículo</h3><div class="perfil-grid"><div><span>Vehículo</span><strong id="driverVehicle">—</strong></div><div><span>Placa</span><strong id="driverPlate">—</strong></div><div><span>Capacidad</span><strong id="driverCapacity">—</strong></div></div></div>
+     <div class="perfil-panel"><h3>Mi vehículo</h3><div class="perfil-grid"><div><span>Vehículo</span><strong id="driverVehicle">—</strong></div><div><span>Placa</span><strong id="driverPlate">—</strong></div><div><span>Capacidad</span><strong id="driverCapacity">—</strong></div><div><span>Mi calificación</span><strong id="driverRating">—</strong></div></div></div>
      <div class="seccion-viajes"><h3>Solicitudes pendientes</h3><p class="nota">Puedes aceptar una solicitud compatible con la capacidad de tu vehículo.</p><div class="viajes-grid" id="driverRequests"><p>No hay solicitudes pendientes.</p></div></div>
      <div class="seccion-viajes"><h3>Mis servicios</h3><div class="viajes-grid" id="driverTrips"><p>Aún no tienes servicios asignados.</p></div></div>
      <div class="mensaje" id="driverMsg"></div>
@@ -582,8 +587,6 @@ button:disabled {
      <p>Verifica que estés usando el correo con el que creaste tu cuenta. Si el problema continúa, contacta al equipo administrador de YANY.</p>
     </details>
    </section>
-   <details class="tarjeta admin">
-   </details>
    </div>
   </main>
   <footer class="pie">
@@ -789,11 +792,6 @@ button:disabled {
     return Object.fromEntries(new FormData(formulario).entries());
   }
 
-  // Convierte los campos de los formularios de acceso en un objeto.
-  function formData(formulario) {
-    return Object.fromEntries(new FormData(formulario).entries());
-  }
-
   // Acceso de pasajeras: el servidor mantiene la sesión y protege la contraseña.
   function mostrarMensajeAuth(id, texto, tipo) {
     $(id).textContent = texto;
@@ -852,6 +850,9 @@ button:disabled {
       if (!rViajes.ok) {
         throw new Error(viajes.error || 'No se pudieron cargar tus servicios.');
       }
+
+      const cal = viajes.calificacion;
+      $('driverRating').textContent = cal && cal.total ? cal.promedio.toFixed(1) + ' ★ (' + cal.total + ')' : 'Sin reseñas';
 
       const contenedor = $('driverRequests');
       contenedor.replaceChildren();
@@ -1026,6 +1027,7 @@ button:disabled {
     $('authPanel').hidden = false;
     $('loginForm').reset();
     $('registerForm').reset();
+    seleccionarTipoRegistro('pasajera');
     $('loginForm').hidden = false;
     $('registerForm').hidden = true;
     rutaLista = false;
@@ -1085,7 +1087,76 @@ button:disabled {
       asignacion.textContent = 'Estamos buscando una conductora para tu viaje.';
       tarjeta.appendChild(asignacion);
     }
+    const resena = bloqueResena(viaje);
+    if (resena) tarjeta.appendChild(resena);
     return tarjeta;
+  }
+
+  // Dibuja las estrellas de una calificación de 1 a 5.
+  function estrellas(n) {
+    return '★'.repeat(n) + '☆'.repeat(5 - n);
+  }
+
+  // Reseña de un viaje finalizado: la pasajera la escribe y la conductora la ve.
+  function bloqueResena(viaje) {
+    if (viaje.estado !== 'Finalizado') return null;
+    const esPasajera = usuarioEnSesion && usuarioEnSesion.rol === 'pasajera';
+
+    if (viaje.resena) {
+      const caja = document.createElement('div');
+      caja.className = 'resena-ver';
+      const nota = document.createElement('span');
+      nota.className = 'estrellas';
+      nota.textContent = estrellas(viaje.resena.calificacion);
+      caja.append(esPasajera ? 'Tu reseña: ' : 'Reseña de la pasajera: ', nota);
+      if (viaje.resena.comentario) {
+        const texto = document.createElement('p');
+        texto.textContent = '“' + viaje.resena.comentario + '”';
+        caja.appendChild(texto);
+      }
+      return caja;
+    }
+    if (!esPasajera) return null;
+
+    const form = document.createElement('div');
+    form.className = 'resena-form';
+    const etiqueta = document.createElement('label');
+    etiqueta.textContent = 'CALIFICA A TU CONDUCTORA';
+    const nota = document.createElement('select');
+    [5, 4, 3, 2, 1].forEach((n) => {
+      const opcion = document.createElement('option');
+      opcion.value = String(n);
+      opcion.textContent = estrellas(n) + ' (' + n + ')';
+      nota.appendChild(opcion);
+    });
+    const comentario = document.createElement('input');
+    comentario.maxLength = 300;
+    comentario.placeholder = 'Escribe un comentario (opcional)';
+    const boton = document.createElement('button');
+    boton.type = 'button';
+    boton.textContent = 'Enviar reseña';
+    const aviso = document.createElement('div');
+    aviso.className = 'mensaje';
+
+    boton.addEventListener('click', async () => {
+      boton.disabled = true;
+      try {
+        const respuesta = await fetch('/api/viajes/' + viaje.id + '/resena', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({calificacion: Number(nota.value), comentario: comentario.value.trim()})
+        });
+        const datos = await respuesta.json();
+        if (!respuesta.ok) throw new Error(datos.error || 'No se pudo guardar la reseña.');
+        await actualizarMiEspacio();
+      } catch (error) {
+        aviso.textContent = error.message;
+        aviso.className = 'mensaje error';
+        boton.disabled = false;
+      }
+    });
+    form.append(etiqueta, nota, comentario, boton, aviso);
+    return form;
   }
 
   function mostrarListaViajes(id, viajes, textoVacio) {

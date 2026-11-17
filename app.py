@@ -14,6 +14,7 @@ from yany.pasajeraPremium import PasajeraPremium
 from yany.conductora import Conductora
 from yany.vehiculo import Vehiculo
 from yany.viaje import Viaje
+from yany.resena import Resena
 from yany.ViajeConAcompanante import ViajeConAcompanante
 
 BASE = os.path.dirname(os.path.abspath(__file__))
@@ -85,9 +86,14 @@ def tarifa(distancia, usuario, acomp=0):
     total=round(base-descuento+recargo)
     return {'base':round(base),'descuento':round(descuento),'descuento_porcentaje':pct,'recargo_acompanante':recargo,'total_estimado':total,'nota':'Tarifa aproximada; puede variar según el recorrido y las condiciones del servicio.'}
 
+def resumen_calificacion(perfil_id):
+    # Promedio de las reseñas que han recibido los viajes de una conductora.
+    notas=[t['resena']['calificacion'] for t in viajes_data if t.get('conductora_id')==perfil_id and t.get('resena')]
+    return {'promedio':round(sum(notas)/len(notas),1) if notas else 0.0,'total':len(notas)}
+
 def viaje_json(t):
     tarifa_data=t.get('tarifa') or {}
-    return {'id':t['id'],'origen':t['origen'],'destino':t['destino'],'estado':t['estado'],'fecha_solicitud':t.get('fecha_solicitud'),'pasajera_id':t.get('pasajera_id'),'conductora_id':t.get('conductora_id'),'distancia_km':t.get('distancia_km',0),'pasajeras':t.get('pasajeras',1),'tipo_servicio':t.get('tipo_servicio','Viaje'),'tarifa':tarifa_data,'acompanante':t.get('acompanante',{})}
+    return {'id':t['id'],'origen':t['origen'],'destino':t['destino'],'estado':t['estado'],'fecha_solicitud':t.get('fecha_solicitud'),'pasajera_id':t.get('pasajera_id'),'conductora_id':t.get('conductora_id'),'distancia_km':t.get('distancia_km',0),'pasajeras':t.get('pasajeras',1),'tipo_servicio':t.get('tipo_servicio','Viaje'),'tarifa':tarifa_data,'acompanante':t.get('acompanante',{}),'resena':t.get('resena')}
 
 @app.get('/')
 def home(): return send_from_directory(BASE, 'index.html')
@@ -175,7 +181,8 @@ def mis_viajes():
     for t in viajes_data:
         if (u['rol']=='pasajera' and t.get('pasajera_id')==u['perfil_id']) or (u['rol']=='conductora' and t.get('conductora_id')==u['perfil_id']): mine.append(viaje_json(t))
     activos=[t for t in mine if t['estado'] not in ('Finalizado','Cancelado')]; historial=[t for t in mine if t['estado'] in ('Finalizado','Cancelado')]
-    return jsonify(activos=activos,historial=historial,total=len(mine))
+    calificacion=resumen_calificacion(u['perfil_id']) if u['rol']=='conductora' else None
+    return jsonify(activos=activos,historial=historial,total=len(mine),calificacion=calificacion)
 
 @app.get('/api/resumen')
 @login_required
@@ -212,6 +219,26 @@ def finalizar(tid):
     u=actual_user(); t=next((x for x in viajes_data if x['id']==tid),None)
     if not t or (u['rol']=='conductora' and t.get('conductora_id')!=u['perfil_id']) or (u['rol']=='pasajera' and t.get('pasajera_id')!=u['perfil_id']) or t['estado']!='En curso': return jsonify(error='No puedes finalizar este viaje.'),400
     t['estado']='Finalizado'; pila_historial.agregar_pila(t); guardar_datos(); return jsonify(ok=True,viaje=viaje_json(t))
+@app.post('/api/viajes/<int:tid>/resena')
+@login_required
+def resenar(tid):
+    # La pasajera deja una calificación (1 a 5) y un comentario sobre un viaje finalizado.
+    u=actual_user()
+    if u['rol']!='pasajera': return jsonify(error='Solo la pasajera del viaje puede dejar una reseña.'),403
+    t=next((x for x in viajes_data if x['id']==tid),None)
+    if not t or t.get('pasajera_id')!=u['perfil_id']: return jsonify(error='No encontramos ese viaje en tu cuenta.'),404
+    if t['estado']!='Finalizado': return jsonify(error='Solo puedes reseñar un viaje finalizado.'),400
+    if t.get('resena'): return jsonify(error='Ya dejaste una reseña para este viaje.'),409
+    d=request.get_json(silent=True) or {}
+    comentario=str(d.get('comentario','')).strip()[:300]
+    try:
+        calificacion=int(d.get('calificacion',0))
+        Resena(tid,calificacion,comentario)  # la clase valida que sea un entero de 1 a 5
+    except (ValueError,TypeError):
+        return jsonify(error='La calificación debe ser un número de 1 a 5.'),400
+    t['resena']={'calificacion':calificacion,'comentario':comentario,'fecha':datetime.now().strftime('%Y-%m-%d %H:%M')}
+    guardar_datos()
+    return jsonify(ok=True,viaje=viaje_json(t)),201
 @app.get('/api/alertas')
 def alertas(): return jsonify([])
 @app.get('/api/salud')
