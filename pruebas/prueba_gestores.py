@@ -10,7 +10,6 @@ from yany.viaje import Viaje
 fallos = []
 
 
-# muestra OK o FALLO segun se cumpla la condicion
 def comprobar(descripcion, condicion):
     if condicion:
         print("OK     ", descripcion)

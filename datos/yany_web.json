@@ -1,0 +1,27 @@
+{
+  "usuarios": [
+    {
+      "id": 1,
+      "perfil_id": 1,
+      "nombre": "Daniela Zapata",
+      "telefono": "3015424540",
+      "correo": "danizagu2812@gmail.com",
+      "password_hash": "scrypt:32768:8:1$PTAX1WfXFRJLAKXa$2b6679b0ef91f8bcae9b77fc1867bcfb2c4994ec56df502bb90e9d695a18f012f213526da3eb3340e56213c13e5e16c3d4ea551b88013771cc7f82a6f06067cd",
+      "rol": "pasajera",
+      "contacto_emergencia": "3003987295",
+      "premium": false,
+      "tipo_cuenta": "Pasajera normal"
+    }
+  ],
+  "pasajeras": [
+    {
+      "id": 1,
+      "nombre": "Daniela Zapata",
+      "telefono": "3015424540",
+      "contacto_emergencia": "3003987295",
+      "premium": false
+    }
+  ],
+  "conductoras": [],
+  "viajes": []
+}
