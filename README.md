@@ -85,7 +85,6 @@ Yany/
 ├── datos/         # Archivos JSON (conductoras, pasajeras, viajes)
 ├── pruebas/       # Pruebas con pytest
 ├── docs/          # Diagramas de clases
-├── web/           # Rutas y plantillas de la página web
 ├── img/           # Imágenes y logo
 ├── index.html     # Página principal
 ├── main.py        # Programa principal (consola)
