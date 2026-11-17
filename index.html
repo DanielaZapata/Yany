@@ -468,6 +468,8 @@ button:disabled {
       <button class="boton secundario" id="useLocation" type="button">
        ◎ Usar mi ubicaci&oacute;n actual
       </button>
+      <label for="zoneSelect">ZONA DE PARTIDA</label>
+      <select id="zoneSelect"><option value="">Cargando zonas...</option></select>
       <label for="destination">
        &iquest;A D&Oacute;NDE VAS?
       </label>
@@ -499,11 +501,13 @@ button:disabled {
        <label for="companionNotes">Información adicional (opcional)</label>
        <input id="companionNotes" maxlength="160" placeholder="Ej. un niño de 5 años"/>
       </div>
+      <label for="hasPet">¿LLEVAS MASCOTA?</label>
+      <select id="hasPet"><option value="no">No</option><option value="si">Sí, llevo una mascota</option></select>
       <label for="passengers">TOTAL DE PERSONAS (TÚ + ACOMPAÑANTES)</label>
       <select id="passengers"><option value="1">1 persona</option><option value="2">2 personas</option><option value="3">3 personas</option><option value="4">4 personas</option></select>
       <label for="distanceKm">DISTANCIA ESTIMADA DEL RECORRIDO (KM)</label>
       <input id="distanceKm" type="number" min="0.1" max="500" step="0.1" placeholder="Se calcula al ver la ruta"/>
-      <div class="perfil-panel" id="farePanel"><h3>Estimación del viaje</h3><p class="nota">Pulsa “Ver mi ruta” y los kilómetros se calculan solos. Si no se pueden calcular, escríbelos tú.</p><div class="perfil-grid"><div><span>Tarifa base</span><strong id="fareBase">$4.500</strong></div><div><span>Valor por kilómetro</span><strong id="farePerKm">$1.900</strong></div><div><span>Descuento de tu cuenta</span><strong id="fareDiscount">—</strong></div><div><span>Total estimado</span><strong id="fareTotal">—</strong></div></div><p class="nota" id="fareNote">La tarifa es aproximada y puede variar según las condiciones del recorrido.</p></div>
+      <div class="perfil-panel" id="farePanel"><h3>Estimación del viaje</h3><p class="nota">Pulsa “Ver mi ruta” y los kilómetros se calculan solos. Si no se pueden calcular, escríbelos tú.</p><div class="perfil-grid"><div><span>Tarifa base</span><strong id="fareBase">—</strong></div><div><span>Valor por kilómetro</span><strong id="farePerKm">—</strong></div><div><span>Recargos (acompañantes y mascota)</span><strong id="fareSurcharge">—</strong></div><div><span>Descuento de tu cuenta</span><strong id="fareDiscount">—</strong></div><div><span>Total estimado</span><strong id="fareTotal">—</strong></div></div><p class="nota" id="fareNote">La tarifa es aproximada y puede variar según las condiciones del recorrido.</p></div>
       <div class="acciones">
        <button id="showRoute" type="submit">
         Ver mi ruta
@@ -703,7 +707,13 @@ button:disabled {
       return;
     }
     const acompana = $('hasCompanion').value === 'si';
+    if (!$('zoneSelect').value) {
+      message('Selecciona tu zona de partida.', 'error');
+      return;
+    }
     const datosViaje = {
+      zona_id: Number($('zoneSelect').value),
+      mascota: $('hasPet').value === 'si',
       origen: $('origin').value.trim(),
       destino: $('destination').value.trim(),
       tipo_servicio: $('serviceType').value,
@@ -860,6 +870,8 @@ button:disabled {
       actualizarResumen();
       actualizarMiEspacio();
       cotizarViaje();
+      cargarZonas();
+      cargarTarifaFija();
     }
   }
 
@@ -902,8 +914,10 @@ button:disabled {
           const detalles = [
             ['Origen', viaje.origen],
             ['Destino', viaje.destino],
+            ['Zona', viaje.zona || '—'],
             ['Personas', viaje.pasajeras],
             ['Distancia', viaje.distancia_km + ' km'],
+            ['Mascota', viaje.mascota ? 'Sí' : 'No'],
             ['Precio estimado', viaje.tarifa ? moneda(viaje.tarifa.total_estimado) : 'No disponible'],
             ['Acompañante', viaje.acompanante && viaje.acompanante.viaja_acompanada
               ? (viaje.acompanante.relacion + ' · ' + viaje.acompanante.cantidad + ' persona(s) ' + (viaje.acompanante.notas || ''))
@@ -996,21 +1010,54 @@ button:disabled {
     $('passengers').value = String(1 + Number($('companionCount').value));
   });
   $('distanceKm').addEventListener('input', cotizarViaje);
+  ['hasCompanion', 'companionCount', 'hasPet'].forEach((id) => $(id).addEventListener('change', cotizarViaje));
   let tarifaActual = null;
   function moneda(valor) { return new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(Number(valor || 0)); }
   let temporizadorCotizacion;
+
+  // Acompañantes y mascota que se suman al precio estimado.
+  function datosCotizacion() {
+    const acompana = $('hasCompanion').value === 'si';
+    return {acompanantes: acompana ? Number($('companionCount').value) : 0, mascota: $('hasPet').value === 'si'};
+  }
+
+  // Muestra la tarifa base y el valor por km, que se definen en la clase Viaje.
+  async function cargarTarifaFija() {
+    try {
+      const r = await fetch('/api/tarifa?distancia_km=0');
+      const d = await r.json();
+      if (r.ok) { $('fareBase').textContent = moneda(d.tarifa_base); $('farePerKm').textContent = moneda(d.valor_km); }
+    } catch (e) {}
+  }
+
+  // Llena el selector con las zonas, que el servidor saca del árbol.
+  async function cargarZonas() {
+    try {
+      const r = await fetch('/api/zonas');
+      const zonas = await r.json();
+      const sel = $('zoneSelect');
+      sel.replaceChildren(new Option('Selecciona tu zona', ''));
+      zonas.forEach((z) => sel.appendChild(new Option(z.nombre, z.id)));
+    } catch (e) {
+      $('zoneSelect').replaceChildren(new Option('No se pudieron cargar las zonas', ''));
+    }
+  }
   async function cotizarViaje() {
     const km = Number($('distanceKm').value);
-    if (!Number.isFinite(km) || km <= 0) { $('fareDiscount').textContent='—'; $('fareTotal').textContent='—'; tarifaActual=null; return; }
+    if (!Number.isFinite(km) || km <= 0) { $('fareDiscount').textContent='—'; $('fareTotal').textContent='—'; $('fareSurcharge').textContent='—'; tarifaActual=null; return; }
     clearTimeout(temporizadorCotizacion);
     temporizadorCotizacion = setTimeout(async () => {
       try {
-        const r = await fetch('/api/tarifa?distancia_km=' + encodeURIComponent(km));
+        const extra = datosCotizacion();
+        const r = await fetch('/api/tarifa?distancia_km=' + encodeURIComponent(km) + '&acompanantes=' + extra.acompanantes + '&mascota=' + extra.mascota);
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || 'No se pudo calcular la tarifa.');
         tarifaActual=data;
         $('fareDiscount').textContent = data.descuento_porcentaje + '% · ' + moneda(data.descuento);
         $('fareTotal').textContent = moneda(data.total_estimado);
+        $('fareSurcharge').textContent = moneda(data.recargo);
+        $('fareBase').textContent = moneda(data.tarifa_base);
+        $('farePerKm').textContent = moneda(data.valor_km);
         $('fareNote').textContent = data.nota;
       } catch (e) { $('fareNote').textContent=e.message; }
     }, 250);
@@ -1081,6 +1128,8 @@ button:disabled {
     const fecha = document.createElement('p');
     fecha.textContent = 'Fecha: ' + (viaje.fecha_solicitud || 'No disponible');
     tarjeta.append(titulo, document.createTextNode(' '), estado, origen, destino, fecha);
+    if (viaje.zona) { const zona=document.createElement('p'); zona.textContent='Zona: '+viaje.zona; tarjeta.appendChild(zona); }
+    if (viaje.mascota) { const masc=document.createElement('p'); masc.textContent='Viaja con mascota'; tarjeta.appendChild(masc); }
     if (viaje.tarifa) { const precio=document.createElement('p'); precio.textContent='Total estimado: '+moneda(viaje.tarifa.total_estimado)+' · Descuento: '+viaje.tarifa.descuento_porcentaje+'%'; tarjeta.appendChild(precio); }
     if (viaje.acompanante && viaje.acompanante.viaja_acompanada) { const acomp=document.createElement('p'); acomp.textContent='Acompañante: '+viaje.acompanante.relacion+' · '+viaje.acompanante.cantidad+' persona(s)'+(viaje.acompanante.notas?' · '+viaje.acompanante.notas:''); tarjeta.appendChild(acomp); }
     if (viaje.estado === 'Conductora asignada' || viaje.estado === 'En curso') {
