@@ -4,8 +4,6 @@ from yany.zona import Zona
 
 fallos = []
 
-
-# muestra OK o FALLO segun se cumpla la condicion
 def comprobar(descripcion, condicion):
     if condicion:
         print("OK     ", descripcion)

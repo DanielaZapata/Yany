@@ -30,7 +30,6 @@ class GestorYANY:
         # para darle un id distinto a cada alerta
         self.__contador_alertas = 1
 
-    # Getters para consultar las estructuras desde el menu
     @property
     def lista_pasajeras(self):
         return self.__lista_pasajeras
@@ -52,7 +51,6 @@ class GestorYANY:
         return self.__arbol_zonas
 
     def registrar_pasajera(self, pasajera):
-        # revisar que no este repetida (por id)
         for p in self.__lista_pasajeras.mostrar():
             if p.id == pasajera.id:
                 return False
@@ -61,7 +59,6 @@ class GestorYANY:
 
 
     def registrar_conductora(self, conductora):
-        # igual que la pasajera pero con lista_conductoras
         for c in self.__lista_conductoras.mostrar():
             if c.id == conductora.id:
                 return False
@@ -70,7 +67,6 @@ class GestorYANY:
 
  
     def solicitar_viaje(self, viaje):
-        # meter el viaje al final de cola_solicitudes
         self.__cola_solicitudes.agregar_cola(viaje)
         return True
 
@@ -83,7 +79,6 @@ class GestorYANY:
 
  
     def asignar_viajes(self):
-        # mientras haya solicitudes y conductoras libres, se van asignando
         asignados = 0
         while not self.__cola_solicitudes.esta_vacia():
             conductora = self.__buscar_conductora_disponible()
@@ -91,14 +86,12 @@ class GestorYANY:
                 if asignados == 0:
                     raise ConductoraNoDisponible("No hay conductoras disponibles.")
                 break
- 
-            # sacar la primera solicitud de la cola y asignarle la conductora
+
             viaje = self.__cola_solicitudes.sacar_cola()
             viaje.conductora = conductora
             viaje.cambiar_estado("En_curso")
             conductora.disponible = False
- 
-            # guardar el viaje en lista_viajes
+
             self.__lista_viajes.agregar(viaje)
             asignados += 1
         return asignados
@@ -110,22 +103,18 @@ class GestorYANY:
         return None    
  
     def activar_alerta(self, id_viaje, tipo):
-        # buscar el viaje, si no existe no se crea la alerta
         viaje = self.__buscar_viaje(id_viaje)
         if viaje is None:
             raise ViajeNoEncontrado(f"No se encontró el viaje {id_viaje}.")
  
-        # crear la alerta con un id nuevo y la hora de ahora
         hora = datetime.now().strftime("%H:%M")
         alerta = Alerta(self.__contador_alertas, viaje, tipo, hora)
         self.__contador_alertas += 1
  
-        # meterla en cola_alertas
         self.__cola_alertas.agregar_cola(alerta)
         return alerta
  
     def atender_alerta(self):
-        # sacar la siguiente alerta de la cola (la que lleva mas tiempo)
         alerta = self.__cola_alertas.sacar_cola()
         if alerta is None:
             raise ColaVaciaError("No hay alertas pendientes por atender.")
@@ -133,38 +122,32 @@ class GestorYANY:
         return alerta
 
     def finalizar_viaje(self, id_viaje):
-        # 1. buscar el viaje en lista_viajes
         viaje = self.__buscar_viaje(id_viaje)
         if viaje is None:
             raise ViajeNoEncontrado(f"No se encontró el viaje {id_viaje}.")
- 
-        # 2. cambiar su estado a finalizado
+
         viaje.cambiar_estado("Finalizado")
  
-        # la conductora queda libre otra vez
         if viaje.conductora is not None:
             viaje.conductora.disponible = True
- 
-        # 3. apilarlo en pila_historial
+
         self.__pila_historial.agregar_pila(viaje)
         return True
  
     def guardar_todo(self):
-        # cada lista se guarda en su propio archivo json
         self.__archivos.guardar_pasajeras(self.__lista_pasajeras)
         self.__archivos.guardar_conductoras(self.__lista_conductoras)
         self.__archivos.guardar_viajes(self.__lista_viajes)
         self.__archivos.guardar_zonas(self.__arbol_zonas)
  
     def cargar_todo(self):
-        # el orden importa, los viajes necesitan las pasajeras y conductoras
         self.__lista_pasajeras = self.__archivos.cargar_pasajeras()
         self.__lista_conductoras = self.__archivos.cargar_conductoras()
         self.__lista_viajes = self.__archivos.cargar_viajes(
             self.__lista_pasajeras, self.__lista_conductoras)
         self.__arbol_zonas = self.__archivos.cargar_zonas()
+
  
-        # el historial no se guarda, se arma de nuevo con los viajes finalizados
         self.__pila_historial = Pila()
         for v in self.__lista_viajes.mostrar():
             if v.estado == "Finalizado":
