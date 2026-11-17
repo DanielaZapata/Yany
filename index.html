@@ -316,7 +316,12 @@ button:disabled {
 .role-choice small{font-size:12px;line-height:1.4;color:#cbb5df;font-weight:400}
 .role-choice.selected{border:2px solid var(--morado);background:#3b2054;box-shadow:0 0 0 2px #d080ff22}
 @media(max-width:560px){.role-options{grid-template-columns:1fr}.role-choice{min-height:110px}}
-
+.resena-form{margin-top:12px;padding:12px;background:#2a1740;border-radius:10px}
+.resena-form label{margin-top:0}
+.resena-form button{width:100%;margin-top:6px}
+.resena-ver{margin-top:10px;padding:10px 12px;background:#2a1740;border-radius:10px;font-size:13px}
+.resena-ver p{margin:6px 0 0}
+.estrellas{color:#f0b8ff;letter-spacing:2px}
 
 </style>
  </head>
@@ -412,7 +417,7 @@ button:disabled {
    <div id="appContent" hidden>
     <section class="tarjeta dashboard" id="driverSpace" hidden>
      <div class="dashboard-head"><div><h2>Espacio de conductora</h2><p>Bienvenida, <strong id="driverWelcome">conductora</strong>. Aquí puedes revisar y aceptar solicitudes.</p></div><button class="boton secundario" id="driverLogoutButton" type="button">Cerrar sesión</button></div>
-     <div class="perfil-panel"><h3>Mi vehículo</h3><div class="perfil-grid"><div><span>Vehículo</span><strong id="driverVehicle">—</strong></div><div><span>Placa</span><strong id="driverPlate">—</strong></div><div><span>Capacidad</span><strong id="driverCapacity">—</strong></div></div></div>
+     <div class="perfil-panel"><h3>Mi vehículo</h3><div class="perfil-grid"><div><span>Vehículo</span><strong id="driverVehicle">—</strong></div><div><span>Placa</span><strong id="driverPlate">—</strong></div><div><span>Capacidad</span><strong id="driverCapacity">—</strong></div><div><span>Mi calificación</span><strong id="driverRating">—</strong></div></div></div>
      <div class="seccion-viajes"><h3>Solicitudes pendientes</h3><p class="nota">Puedes aceptar una solicitud compatible con la capacidad de tu vehículo.</p><div class="viajes-grid" id="driverRequests"><p>No hay solicitudes pendientes.</p></div></div>
      <div class="seccion-viajes"><h3>Mis servicios</h3><div class="viajes-grid" id="driverTrips"><p>Aún no tienes servicios asignados.</p></div></div>
      <div class="mensaje" id="driverMsg"></div>
@@ -463,6 +468,8 @@ button:disabled {
       <button class="boton secundario" id="useLocation" type="button">
        ◎ Usar mi ubicaci&oacute;n actual
       </button>
+      <label for="zoneSelect">ZONA DE PARTIDA</label>
+      <select id="zoneSelect"><option value="">Cargando zonas...</option></select>
       <label for="destination">
        &iquest;A D&Oacute;NDE VAS?
       </label>
@@ -494,11 +501,13 @@ button:disabled {
        <label for="companionNotes">Información adicional (opcional)</label>
        <input id="companionNotes" maxlength="160" placeholder="Ej. un niño de 5 años"/>
       </div>
+      <label for="hasPet">¿LLEVAS MASCOTA?</label>
+      <select id="hasPet"><option value="no">No</option><option value="si">Sí, llevo una mascota</option></select>
       <label for="passengers">TOTAL DE PERSONAS (TÚ + ACOMPAÑANTES)</label>
       <select id="passengers"><option value="1">1 persona</option><option value="2">2 personas</option><option value="3">3 personas</option><option value="4">4 personas</option></select>
       <label for="distanceKm">DISTANCIA ESTIMADA DEL RECORRIDO (KM)</label>
-      <input id="distanceKm" type="number" min="0.1" max="500" step="0.1" placeholder="Ej. 8.5" required/>
-      <div class="perfil-panel" id="farePanel"><h3>Estimación del viaje</h3><p class="nota">Ingresa la distancia aproximada para calcular el valor antes de solicitar.</p><div class="perfil-grid"><div><span>Tarifa base</span><strong id="fareBase">$4.500</strong></div><div><span>Valor por kilómetro</span><strong id="farePerKm">$1.900</strong></div><div><span>Descuento de tu cuenta</span><strong id="fareDiscount">—</strong></div><div><span>Total estimado</span><strong id="fareTotal">—</strong></div></div><p class="nota" id="fareNote">La tarifa es aproximada y puede variar según las condiciones del recorrido.</p></div>
+      <input id="distanceKm" type="number" min="0.1" max="500" step="0.1" placeholder="Se calcula al ver la ruta"/>
+      <div class="perfil-panel" id="farePanel"><h3>Estimación del viaje</h3><p class="nota">Pulsa “Ver mi ruta” y los kilómetros se calculan solos. Si no se pueden calcular, escríbelos tú.</p><div class="perfil-grid"><div><span>Tarifa base</span><strong id="fareBase">—</strong></div><div><span>Valor por kilómetro</span><strong id="farePerKm">—</strong></div><div><span>Recargos (acompañantes y mascota)</span><strong id="fareSurcharge">—</strong></div><div><span>Descuento de tu cuenta</span><strong id="fareDiscount">—</strong></div><div><span>Total estimado</span><strong id="fareTotal">—</strong></div></div><p class="nota" id="fareNote">La tarifa es aproximada y puede variar según las condiciones del recorrido.</p></div>
       <div class="acciones">
        <button id="showRoute" type="submit">
         Ver mi ruta
@@ -582,8 +591,6 @@ button:disabled {
      <p>Verifica que estés usando el correo con el que creaste tu cuenta. Si el problema continúa, contacta al equipo administrador de YANY.</p>
     </details>
    </section>
-   <details class="tarjeta admin">
-   </details>
    </div>
   </main>
   <footer class="pie">
@@ -613,7 +620,7 @@ button:disabled {
   }
 
   // Muestra la ruta antes de permitir que se registre la solicitud.
-  $('tripForm').addEventListener('submit', (event) => {
+  $('tripForm').addEventListener('submit', async (event) => {
     event.preventDefault();
 
     const origen = $('origin').value.trim();
@@ -624,11 +631,39 @@ button:disabled {
     mostrarMapa(origen, destino);
     rutaLista = true;
     $('requestService').disabled = false;
-    message(
-      'La ruta se está mostrando en Google Maps. Ya puedes solicitar el servicio.',
-      'ok'
-    );
+    message('La ruta se está mostrando en Google Maps. Calculando la distancia...', 'ok');
+    await calcularDistancia(origen, destino);
   });
+
+  // Pide al servidor los kilómetros de la ruta y calcula el precio con ellos.
+  let kmAutomatico = false;
+  async function calcularDistancia(origen, destino) {
+    try {
+      const r = await fetch('/api/ruta?origen=' + encodeURIComponent(origen) + '&destino=' + encodeURIComponent(destino));
+      const datos = await r.json();
+      if (!r.ok) throw new Error(datos.error || 'No se pudo calcular la distancia.');
+      $('distanceKm').value = datos.distancia_km;
+      kmAutomatico = true;
+      cotizarViaje();
+      message('Ruta lista: ' + datos.distancia_km + ' km. Ya puedes solicitar el servicio.', 'ok');
+    } catch (error) {
+      kmAutomatico = false;
+      message('La ruta se muestra en el mapa. ' + error.message + ' Escribe los kilómetros para ver el precio.', 'error');
+    }
+  }
+
+  // Si cambian el origen o el destino, la ruta y los kilómetros calculados ya no sirven.
+  function reiniciarRuta() {
+    rutaLista = false;
+    $('requestService').disabled = true;
+    if (kmAutomatico) {
+      $('distanceKm').value = '';
+      kmAutomatico = false;
+      cotizarViaje();
+    }
+  }
+  ['origin', 'destination'].forEach((id) => $(id).addEventListener('input', reiniciarRuta));
+  $('distanceKm').addEventListener('input', () => { kmAutomatico = false; });
 
 // Permite usar la ubicación actual como punto de partida.
   $('useLocation').addEventListener('click', () => {
@@ -645,6 +680,7 @@ button:disabled {
           position.coords.longitude.toFixed(6);
 
         $('origin').value = coordenadas;
+        reiniciarRuta();
         $('googleMap').src =
           'https://maps.google.com/maps?q=' +
           encodeURIComponent(coordenadas) +
@@ -667,11 +703,17 @@ button:disabled {
 
     const distancia = Number($('distanceKm').value);
     if (!Number.isFinite(distancia) || distancia <= 0) {
-      message('Indica la distancia estimada en kilómetros para calcular el precio.', 'error');
+      message('Escribe los kilómetros del recorrido, o pulsa “Ver mi ruta” para que se calculen solos.', 'error');
       return;
     }
     const acompana = $('hasCompanion').value === 'si';
+    if (!$('zoneSelect').value) {
+      message('Selecciona tu zona de partida.', 'error');
+      return;
+    }
     const datosViaje = {
+      zona_id: Number($('zoneSelect').value),
+      mascota: $('hasPet').value === 'si',
       origen: $('origin').value.trim(),
       destino: $('destination').value.trim(),
       tipo_servicio: $('serviceType').value,
@@ -789,11 +831,6 @@ button:disabled {
     return Object.fromEntries(new FormData(formulario).entries());
   }
 
-  // Convierte los campos de los formularios de acceso en un objeto.
-  function formData(formulario) {
-    return Object.fromEntries(new FormData(formulario).entries());
-  }
-
   // Acceso de pasajeras: el servidor mantiene la sesión y protege la contraseña.
   function mostrarMensajeAuth(id, texto, tipo) {
     $(id).textContent = texto;
@@ -833,6 +870,8 @@ button:disabled {
       actualizarResumen();
       actualizarMiEspacio();
       cotizarViaje();
+      cargarZonas();
+      cargarTarifaFija();
     }
   }
 
@@ -853,6 +892,9 @@ button:disabled {
         throw new Error(viajes.error || 'No se pudieron cargar tus servicios.');
       }
 
+      const cal = viajes.calificacion;
+      $('driverRating').textContent = cal && cal.total ? cal.promedio.toFixed(1) + ' ★ (' + cal.total + ')' : 'Sin reseñas';
+
       const contenedor = $('driverRequests');
       contenedor.replaceChildren();
 
@@ -872,8 +914,10 @@ button:disabled {
           const detalles = [
             ['Origen', viaje.origen],
             ['Destino', viaje.destino],
+            ['Zona', viaje.zona || '—'],
             ['Personas', viaje.pasajeras],
             ['Distancia', viaje.distancia_km + ' km'],
+            ['Mascota', viaje.mascota ? 'Sí' : 'No'],
             ['Precio estimado', viaje.tarifa ? moneda(viaje.tarifa.total_estimado) : 'No disponible'],
             ['Acompañante', viaje.acompanante && viaje.acompanante.viaja_acompanada
               ? (viaje.acompanante.relacion + ' · ' + viaje.acompanante.cantidad + ' persona(s) ' + (viaje.acompanante.notas || ''))
@@ -966,21 +1010,54 @@ button:disabled {
     $('passengers').value = String(1 + Number($('companionCount').value));
   });
   $('distanceKm').addEventListener('input', cotizarViaje);
+  ['hasCompanion', 'companionCount', 'hasPet'].forEach((id) => $(id).addEventListener('change', cotizarViaje));
   let tarifaActual = null;
   function moneda(valor) { return new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(Number(valor || 0)); }
   let temporizadorCotizacion;
+
+  // Acompañantes y mascota que se suman al precio estimado.
+  function datosCotizacion() {
+    const acompana = $('hasCompanion').value === 'si';
+    return {acompanantes: acompana ? Number($('companionCount').value) : 0, mascota: $('hasPet').value === 'si'};
+  }
+
+  // Muestra la tarifa base y el valor por km, que se definen en la clase Viaje.
+  async function cargarTarifaFija() {
+    try {
+      const r = await fetch('/api/tarifa?distancia_km=0');
+      const d = await r.json();
+      if (r.ok) { $('fareBase').textContent = moneda(d.tarifa_base); $('farePerKm').textContent = moneda(d.valor_km); }
+    } catch (e) {}
+  }
+
+  // Llena el selector con las zonas, que el servidor saca del árbol.
+  async function cargarZonas() {
+    try {
+      const r = await fetch('/api/zonas');
+      const zonas = await r.json();
+      const sel = $('zoneSelect');
+      sel.replaceChildren(new Option('Selecciona tu zona', ''));
+      zonas.forEach((z) => sel.appendChild(new Option(z.nombre, z.id)));
+    } catch (e) {
+      $('zoneSelect').replaceChildren(new Option('No se pudieron cargar las zonas', ''));
+    }
+  }
   async function cotizarViaje() {
     const km = Number($('distanceKm').value);
-    if (!Number.isFinite(km) || km <= 0) { $('fareDiscount').textContent='—'; $('fareTotal').textContent='—'; tarifaActual=null; return; }
+    if (!Number.isFinite(km) || km <= 0) { $('fareDiscount').textContent='—'; $('fareTotal').textContent='—'; $('fareSurcharge').textContent='—'; tarifaActual=null; return; }
     clearTimeout(temporizadorCotizacion);
     temporizadorCotizacion = setTimeout(async () => {
       try {
-        const r = await fetch('/api/tarifa?distancia_km=' + encodeURIComponent(km));
+        const extra = datosCotizacion();
+        const r = await fetch('/api/tarifa?distancia_km=' + encodeURIComponent(km) + '&acompanantes=' + extra.acompanantes + '&mascota=' + extra.mascota);
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || 'No se pudo calcular la tarifa.');
         tarifaActual=data;
         $('fareDiscount').textContent = data.descuento_porcentaje + '% · ' + moneda(data.descuento);
         $('fareTotal').textContent = moneda(data.total_estimado);
+        $('fareSurcharge').textContent = moneda(data.recargo);
+        $('fareBase').textContent = moneda(data.tarifa_base);
+        $('farePerKm').textContent = moneda(data.valor_km);
         $('fareNote').textContent = data.nota;
       } catch (e) { $('fareNote').textContent=e.message; }
     }, 250);
@@ -1026,6 +1103,7 @@ button:disabled {
     $('authPanel').hidden = false;
     $('loginForm').reset();
     $('registerForm').reset();
+    seleccionarTipoRegistro('pasajera');
     $('loginForm').hidden = false;
     $('registerForm').hidden = true;
     rutaLista = false;
@@ -1050,6 +1128,8 @@ button:disabled {
     const fecha = document.createElement('p');
     fecha.textContent = 'Fecha: ' + (viaje.fecha_solicitud || 'No disponible');
     tarjeta.append(titulo, document.createTextNode(' '), estado, origen, destino, fecha);
+    if (viaje.zona) { const zona=document.createElement('p'); zona.textContent='Zona: '+viaje.zona; tarjeta.appendChild(zona); }
+    if (viaje.mascota) { const masc=document.createElement('p'); masc.textContent='Viaja con mascota'; tarjeta.appendChild(masc); }
     if (viaje.tarifa) { const precio=document.createElement('p'); precio.textContent='Total estimado: '+moneda(viaje.tarifa.total_estimado)+' · Descuento: '+viaje.tarifa.descuento_porcentaje+'%'; tarjeta.appendChild(precio); }
     if (viaje.acompanante && viaje.acompanante.viaja_acompanada) { const acomp=document.createElement('p'); acomp.textContent='Acompañante: '+viaje.acompanante.relacion+' · '+viaje.acompanante.cantidad+' persona(s)'+(viaje.acompanante.notas?' · '+viaje.acompanante.notas:''); tarjeta.appendChild(acomp); }
     if (viaje.estado === 'Conductora asignada' || viaje.estado === 'En curso') {
@@ -1085,7 +1165,76 @@ button:disabled {
       asignacion.textContent = 'Estamos buscando una conductora para tu viaje.';
       tarjeta.appendChild(asignacion);
     }
+    const resena = bloqueResena(viaje);
+    if (resena) tarjeta.appendChild(resena);
     return tarjeta;
+  }
+
+  // Dibuja las estrellas de una calificación de 1 a 5.
+  function estrellas(n) {
+    return '★'.repeat(n) + '☆'.repeat(5 - n);
+  }
+
+  // Reseña de un viaje finalizado: la pasajera la escribe y la conductora la ve.
+  function bloqueResena(viaje) {
+    if (viaje.estado !== 'Finalizado') return null;
+    const esPasajera = usuarioEnSesion && usuarioEnSesion.rol === 'pasajera';
+
+    if (viaje.resena) {
+      const caja = document.createElement('div');
+      caja.className = 'resena-ver';
+      const nota = document.createElement('span');
+      nota.className = 'estrellas';
+      nota.textContent = estrellas(viaje.resena.calificacion);
+      caja.append(esPasajera ? 'Tu reseña: ' : 'Reseña de la pasajera: ', nota);
+      if (viaje.resena.comentario) {
+        const texto = document.createElement('p');
+        texto.textContent = '“' + viaje.resena.comentario + '”';
+        caja.appendChild(texto);
+      }
+      return caja;
+    }
+    if (!esPasajera) return null;
+
+    const form = document.createElement('div');
+    form.className = 'resena-form';
+    const etiqueta = document.createElement('label');
+    etiqueta.textContent = 'CALIFICA A TU CONDUCTORA';
+    const nota = document.createElement('select');
+    [5, 4, 3, 2, 1].forEach((n) => {
+      const opcion = document.createElement('option');
+      opcion.value = String(n);
+      opcion.textContent = estrellas(n) + ' (' + n + ')';
+      nota.appendChild(opcion);
+    });
+    const comentario = document.createElement('input');
+    comentario.maxLength = 300;
+    comentario.placeholder = 'Escribe un comentario (opcional)';
+    const boton = document.createElement('button');
+    boton.type = 'button';
+    boton.textContent = 'Enviar reseña';
+    const aviso = document.createElement('div');
+    aviso.className = 'mensaje';
+
+    boton.addEventListener('click', async () => {
+      boton.disabled = true;
+      try {
+        const respuesta = await fetch('/api/viajes/' + viaje.id + '/resena', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({calificacion: Number(nota.value), comentario: comentario.value.trim()})
+        });
+        const datos = await respuesta.json();
+        if (!respuesta.ok) throw new Error(datos.error || 'No se pudo guardar la reseña.');
+        await actualizarMiEspacio();
+      } catch (error) {
+        aviso.textContent = error.message;
+        aviso.className = 'mensaje error';
+        boton.disabled = false;
+      }
+    });
+    form.append(etiqueta, nota, comentario, boton, aviso);
+    return form;
   }
 
   function mostrarListaViajes(id, viajes, textoVacio) {

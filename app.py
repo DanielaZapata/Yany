@@ -1,5 +1,7 @@
-"""Adaptador web de YANY."""
-import json, os, re
+# Adaptador web de YANY
+
+import json, os, re, time
+import urllib.request, urllib.parse
 from datetime import datetime
 from functools import wraps
 from flask import Flask, jsonify, request, session, send_from_directory
@@ -14,7 +16,11 @@ from yany.pasajeraPremium import PasajeraPremium
 from yany.conductora import Conductora
 from yany.vehiculo import Vehiculo
 from yany.viaje import Viaje
+from yany.resena import Resena
+from yany.zona import Zona
 from yany.ViajeConAcompanante import ViajeConAcompanante
+
+ESTADO_CLASE = {'Pendiente': 'Solicitado', 'Conductora asignada': 'Solicitado', 'En curso': 'En_curso', 'Finalizado': 'Finalizado', 'Cancelado': 'Cancelado'}
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE, 'datos')
@@ -23,7 +29,7 @@ os.makedirs(DATA_DIR, exist_ok=True)
 app = Flask(__name__)
 app.config.update(SECRET_KEY=os.environ.get('YANY_SECRET_KEY', 'yany-clave-local-cambiar-en-produccion'), SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax')
 
-# Se utilizan las estructuras implementadas por el equipo.
+# Se utilizan las estructuras implementadas 
 lista_pasajeras, lista_conductoras, lista_viajes = Lista(), Lista(), Lista()
 cola_solicitudes, cola_alertas, pila_historial, arbol_zonas = Cola(), Cola(), Pila(), Arbol()
 usuarios, viajes_data = [], []
@@ -48,10 +54,10 @@ def cargar_datos():
         p=objetos_pasajeras.get(t.get('pasajera_id'))
         if not p: continue
         c=objetos_conductoras.get(t.get('conductora_id'))
-        obj=ViajeConAcompanante(t['id'],p,c,t['origen'],t['destino'],int(t.get('acompanante',{}).get('cantidad',0)),False,t.get('estado','Solicitado'))
+        obj=ViajeConAcompanante(t['id'],p,c,t['origen'],t['destino'],int(t.get('acompanante',{}).get('cantidad',0)),bool(t.get('mascota',False)),ESTADO_CLASE.get(t.get('estado'),'Solicitado'),float(t.get('distancia_km',0) or 0))
         lista_viajes.agregar(obj)
-        if obj.estado == 'Finalizado': pila_historial.agregar_pila(obj)
-        elif obj.estado == 'Pendiente': cola_solicitudes.agregar_cola(obj)
+        if t.get('estado') == 'Finalizado': pila_historial.agregar_pila(t)
+        elif t.get('estado') == 'Pendiente': cola_solicitudes.agregar_cola(t)
 
 def guardar_datos():
     data={'usuarios':usuarios,'pasajeras':[],'conductoras':[],'viajes':viajes_data}
@@ -76,18 +82,67 @@ def login_required(fn):
         return fn(*a,**kw)
     return wrapper
 
-def tarifa(distancia, usuario, acomp=0):
-    base=4500+max(0,float(distancia))*1900
-    premium=bool(usuario.get('premium'))
-    pct=5 if premium else 2
-    descuento=base*pct/100
-    recargo=max(0,int(acomp))*2000
-    total=round(base-descuento+recargo)
-    return {'base':round(base),'descuento':round(descuento),'descuento_porcentaje':pct,'recargo_acompanante':recargo,'total_estimado':total,'nota':'Tarifa aproximada; puede variar según el recorrido y las condiciones del servicio.'}
+def tarifa(distancia, usuario, acomp=0, mascota=False):
+
+    km = max(0.0, float(distancia))
+    acomp = max(0, int(acomp))
+    mascota = bool(mascota)
+
+    pasajera = objetos_pasajeras[usuario['perfil_id']]
+
+    viaje = ViajeConAcompanante(
+        0,
+        pasajera,
+        None,
+        '-',
+        '-',
+        acomp,
+        mascota,
+        'Solicitado',
+        km
+    )
+
+    total = viaje.calcular_tarifa()
+
+    base = Viaje.TARIFA_BASE + (
+        km * Viaje.VALOR_KM
+    )
+
+    descuento = pasajera.calcular_descuento(base)
+
+    recargo_acompanante = (
+        acomp * ViajeConAcompanante.RECARGO_ACOMPANANTE
+    )
+
+    recargo_mascota = (
+        ViajeConAcompanante.RECARGO_MASCOTA
+        if mascota else 0
+    )
+
+    recargo = recargo_acompanante + recargo_mascota
+
+    return {
+        'tarifa_base': Viaje.TARIFA_BASE,
+        'valor_km': Viaje.VALOR_KM,
+        'base': round(base),
+        'descuento': round(descuento),
+        'descuento_porcentaje': round(
+            pasajera.calcular_descuento(100)
+        ),
+        'recargo': recargo,
+        'recargo_acompanante': recargo,
+        'total_estimado': round(total),
+        'nota': 'Tarifa aproximada; puede variar según el recorrido y las condiciones del servicio.'
+    }
+
+def resumen_calificacion(perfil_id):
+    # Promedio de las reseñas que han recibido los viajes de una conductora.
+    notas=[t['resena']['calificacion'] for t in viajes_data if t.get('conductora_id')==perfil_id and t.get('resena')]
+    return {'promedio':round(sum(notas)/len(notas),1) if notas else 0.0,'total':len(notas)}
 
 def viaje_json(t):
     tarifa_data=t.get('tarifa') or {}
-    return {'id':t['id'],'origen':t['origen'],'destino':t['destino'],'estado':t['estado'],'fecha_solicitud':t.get('fecha_solicitud'),'pasajera_id':t.get('pasajera_id'),'conductora_id':t.get('conductora_id'),'distancia_km':t.get('distancia_km',0),'pasajeras':t.get('pasajeras',1),'tipo_servicio':t.get('tipo_servicio','Viaje'),'tarifa':tarifa_data,'acompanante':t.get('acompanante',{})}
+    return {'id':t['id'],'origen':t['origen'],'destino':t['destino'],'estado':t['estado'],'fecha_solicitud':t.get('fecha_solicitud'),'pasajera_id':t.get('pasajera_id'),'conductora_id':t.get('conductora_id'),'distancia_km':t.get('distancia_km',0),'pasajeras':t.get('pasajeras',1),'tipo_servicio':t.get('tipo_servicio','Viaje'),'tarifa':tarifa_data,'acompanante':t.get('acompanante',{}),'resena':t.get('resena'),'zona':t.get('zona'),'mascota':t.get('mascota',False)}
 
 @app.get('/')
 def home(): return send_from_directory(BASE, 'index.html')
@@ -136,7 +191,11 @@ def me():
 @app.get('/api/tarifa')
 @login_required
 def cotizar():
-    u=actual_user(); km=request.args.get('distancia_km',0,type=float); return jsonify(**tarifa(km,u))
+    u=actual_user()
+    if u['rol']!='pasajera': return jsonify(error='Solo las pasajeras consultan la tarifa.'),403
+    km=request.args.get('distancia_km',0,type=float); acomp=request.args.get('acompanantes',0,type=int)
+    mascota=request.args.get('mascota','false').lower()=='true'
+    return jsonify(**tarifa(km,u,acomp,mascota))
 
 @app.route('/api/viajes',methods=['GET','POST'])
 @login_required
@@ -148,10 +207,15 @@ def viajes():
     if not origen or not destino: return jsonify(error='Ingresa el origen y el destino.'),400
     acomp=d.get('acompanante') or {}; cantidad=int(acomp.get('cantidad',0) or 0) if acomp.get('viaja_acompanada') else 0
     km=float(d.get('distancia_km',0) or 0); tid=max([t['id'] for t in viajes_data] or [0])+1
-    t={'id':tid,'pasajera_id':u['perfil_id'],'conductora_id':None,'origen':origen,'destino':destino,'estado':'Pendiente','fecha_solicitud':datetime.now().strftime('%Y-%m-%d %H:%M'),'distancia_km':km,'pasajeras':int(d.get('pasajeras',1) or 1),'tipo_servicio':d.get('tipo_servicio','Viaje'),'acompanante':{'viaja_acompanada':bool(cantidad),'relacion':acomp.get('relacion'),'cantidad':cantidad,'notas':acomp.get('notas','')},'tarifa':tarifa(km,u,cantidad)}
+    mascota=bool(d.get('mascota',False))
+    try: zid=int(d.get('zona_id') or 0)
+    except (TypeError,ValueError): zid=0
+    zona=arbol_zonas.buscar(zid)  # se busca la zona en el árbol
+    if not zona: return jsonify(error='Selecciona la zona de partida.'),400
+    t={'id':tid,'pasajera_id':u['perfil_id'],'conductora_id':None,'origen':origen,'destino':destino,'estado':'Pendiente','fecha_solicitud':datetime.now().strftime('%Y-%m-%d %H:%M'),'distancia_km':km,'pasajeras':int(d.get('pasajeras',1) or 1),'tipo_servicio':d.get('tipo_servicio','Viaje'),'acompanante':{'viaja_acompanada':bool(cantidad),'relacion':acomp.get('relacion'),'cantidad':cantidad,'notas':acomp.get('notas','')},'tarifa':tarifa(km,u,cantidad,mascota),'mascota':mascota,'zona_id':zona.id,'zona':zona.nombre}
     viajes_data.append(t); cola_solicitudes.agregar_cola(t); guardar_datos()
     # Se instancia el modelo original y se conserva en la lista enlazada.
-    p=objetos_pasajeras.get(u['perfil_id']); obj=ViajeConAcompanante(tid,p,None,origen,destino,cantidad) if p else None
+    p=objetos_pasajeras.get(u['perfil_id']); obj=ViajeConAcompanante(tid,p,None,origen,destino,cantidad,mascota,'Solicitado',km) if p else None
     if obj: lista_viajes.agregar(obj)
     return jsonify(ok=True,viaje=viaje_json(t)),201
 
@@ -175,7 +239,8 @@ def mis_viajes():
     for t in viajes_data:
         if (u['rol']=='pasajera' and t.get('pasajera_id')==u['perfil_id']) or (u['rol']=='conductora' and t.get('conductora_id')==u['perfil_id']): mine.append(viaje_json(t))
     activos=[t for t in mine if t['estado'] not in ('Finalizado','Cancelado')]; historial=[t for t in mine if t['estado'] in ('Finalizado','Cancelado')]
-    return jsonify(activos=activos,historial=historial,total=len(mine))
+    calificacion=resumen_calificacion(u['perfil_id']) if u['rol']=='conductora' else None
+    return jsonify(activos=activos,historial=historial,total=len(mine),calificacion=calificacion)
 
 @app.get('/api/resumen')
 @login_required
@@ -212,10 +277,81 @@ def finalizar(tid):
     u=actual_user(); t=next((x for x in viajes_data if x['id']==tid),None)
     if not t or (u['rol']=='conductora' and t.get('conductora_id')!=u['perfil_id']) or (u['rol']=='pasajera' and t.get('pasajera_id')!=u['perfil_id']) or t['estado']!='En curso': return jsonify(error='No puedes finalizar este viaje.'),400
     t['estado']='Finalizado'; pila_historial.agregar_pila(t); guardar_datos(); return jsonify(ok=True,viaje=viaje_json(t))
+@app.post('/api/viajes/<int:tid>/resena')
+@login_required
+def resenar(tid):
+    # La pasajera deja una calificación (1 a 5) y un comentario sobre un viaje finalizado.
+    u=actual_user()
+    if u['rol']!='pasajera': return jsonify(error='Solo la pasajera del viaje puede dejar una reseña.'),403
+    t=next((x for x in viajes_data if x['id']==tid),None)
+    if not t or t.get('pasajera_id')!=u['perfil_id']: return jsonify(error='No encontramos ese viaje en tu cuenta.'),404
+    if t['estado']!='Finalizado': return jsonify(error='Solo puedes reseñar un viaje finalizado.'),400
+    if t.get('resena'): return jsonify(error='Ya dejaste una reseña para este viaje.'),409
+    d=request.get_json(silent=True) or {}
+    comentario=str(d.get('comentario','')).strip()[:300]
+    try:
+        calificacion=int(d.get('calificacion',0))
+        Resena(tid,calificacion,comentario)  # la clase valida que sea un entero de 1 a 5
+    except (ValueError,TypeError):
+        return jsonify(error='La calificación debe ser un número de 1 a 5.'),400
+    t['resena']={'calificacion':calificacion,'comentario':comentario,'fecha':datetime.now().strftime('%Y-%m-%d %H:%M')}
+    guardar_datos()
+    return jsonify(ok=True,viaje=viaje_json(t)),201
+# --- Distancia del recorrido: se calcula con OpenStreetMap (Nominatim) y OSRM, sin clave de API. ---
+_cache_geo = {}
+_ultima_consulta = [0.0]
+
+def _pedir_json(url):
+    req = urllib.request.Request(url, headers={'User-Agent': 'YANY-proyecto-ITM/1.0'})
+    with urllib.request.urlopen(req, timeout=8) as r:
+        return json.load(r)
+
+def _geocodificar(texto):
+    # Devuelve (latitud, longitud). Acepta coordenadas "6.25, -75.56" o una dirección escrita.
+    m = re.fullmatch(r'\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*', texto)
+    if m: return float(m.group(1)), float(m.group(2))
+    if texto.lower() in _cache_geo: return _cache_geo[texto.lower()]
+    espera = 1.1 - (time.time() - _ultima_consulta[0])  # Nominatim pide máximo 1 consulta por segundo
+    if espera > 0: time.sleep(espera)
+    url = 'https://nominatim.openstreetmap.org/search?' + urllib.parse.urlencode({'q': texto, 'format': 'jsonv2', 'limit': 1, 'countrycodes': 'co'})
+    datos = _pedir_json(url)
+    _ultima_consulta[0] = time.time()
+    if not datos: return None
+    _cache_geo[texto.lower()] = (float(datos[0]['lat']), float(datos[0]['lon']))
+    return _cache_geo[texto.lower()]
+
+@app.get('/api/ruta')
+@login_required
+def ruta():
+    origen = request.args.get('origen', '').strip(); destino = request.args.get('destino', '').strip()
+    if not origen or not destino: return jsonify(error='Ingresa el origen y el destino.'), 400
+    try:
+        a = _geocodificar(origen); b = _geocodificar(destino)
+        if not a: return jsonify(error='No pudimos ubicar el punto de partida en el mapa.'), 404
+        if not b: return jsonify(error='No pudimos ubicar el destino en el mapa.'), 404
+        datos = _pedir_json('https://router.project-osrm.org/route/v1/driving/%s,%s;%s,%s?overview=false' % (a[1], a[0], b[1], b[0]))
+        km = max(0.1, round(datos['routes'][0]['distance'] / 1000, 1))
+    except (OSError, ValueError, KeyError, IndexError):
+        return jsonify(error='No pudimos calcular la distancia en este momento.'), 502
+    return jsonify(distancia_km=km)
+
+#  Zonas: se guardan en el árbol binario de búsqueda (ordenadas por id).
+ZONAS_INICIALES = [(5,'El Poblado'),(2,'Bello'),(8,'Laureles'),(1,'Belén'),(3,'Buenos Aires'),(7,'Itagüí'),(10,'Sabaneta'),(4,'Centro'),(6,'Envigado'),(9,'Robledo')]
+def cargar_zonas():
+    for zid, nombre in ZONAS_INICIALES: arbol_zonas.insertar(Zona(zid, nombre))
+
+@app.get('/api/zonas')
+def zonas(): return jsonify([{'id':z.id,'nombre':z.nombre} for z in arbol_zonas.inorden()])
+@app.get('/api/zonas/<int:zid>')
+def zona_por_id(zid):
+    z=arbol_zonas.buscar(zid)
+    if not z: return jsonify(error='Esa zona no existe.'),404
+    return jsonify(id=z.id,nombre=z.nombre)
 @app.get('/api/alertas')
 def alertas(): return jsonify([])
 @app.get('/api/salud')
-def salud(): return jsonify(ok=True,servicio='YANY',estructuras=['Lista','Cola','Pila','Arbol'])
+def salud(): return jsonify(ok=True,servicio='YANY',estructuras=['Lista','Cola','Pila','Arbol'],zonas=len(arbol_zonas.inorden()))
 
+cargar_zonas()
 cargar_datos()
 if __name__=='__main__': app.run(debug=True)

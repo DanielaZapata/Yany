@@ -157,14 +157,14 @@ class GestorYANY:
         self.__archivos.guardar_zonas(self.__arbol_zonas)
  
     def cargar_todo(self):
-        # el orden importa: los viajes necesitan las pasajeras y conductoras
+        # el orden importa, los viajes necesitan las pasajeras y conductoras
         self.__lista_pasajeras = self.__archivos.cargar_pasajeras()
         self.__lista_conductoras = self.__archivos.cargar_conductoras()
         self.__lista_viajes = self.__archivos.cargar_viajes(
             self.__lista_pasajeras, self.__lista_conductoras)
         self.__arbol_zonas = self.__archivos.cargar_zonas()
  
-        # el historial no se guarda: se arma de nuevo con los viajes finalizados
+        # el historial no se guarda, se arma de nuevo con los viajes finalizados
         self.__pila_historial = Pila()
         for v in self.__lista_viajes.mostrar():
             if v.estado == "Finalizado":
